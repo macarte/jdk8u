@@ -600,7 +600,8 @@ AC_DEFUN_ONCE([LIB_SETUP_FREETYPE],
           #include<ft2build.h>
           #include FT_FREETYPE_H
           int main () {
-            FT_Init_FreeType(NULL);
+            FT_Library library;
+            FT_Init_FreeType(&library);
             return 0;
           }
         ]])],
