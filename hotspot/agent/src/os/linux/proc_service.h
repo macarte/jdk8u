@@ -26,7 +26,10 @@
 #define _PROC_SERVICE_H_
 
 #include <stdio.h>
+#include <sys/procfs.h>
+#ifdef INCLUDE_SA_ATTACH
 #include <thread_db.h>
+#endif
 
 // Linux does not have the proc service library, though it does provide the
 // thread_db library which can be used to manipulate threads without having
@@ -42,6 +45,8 @@ typedef enum {
         PS_NOSYM,       /* p_lookup() could not find given symbol */
         PS_NOFREGS      /* FPU register set not available for given lwp */
 } ps_err_e;
+
+#ifdef INCLUDE_SA_ATTACH
 
 // ps_getpid() is only defined on Linux to return a thread's process ID
 pid_t ps_getpid(struct ps_prochandle *ph);
@@ -72,5 +77,7 @@ ps_err_e ps_lgetregs(struct ps_prochandle *ph, lwpid_t lid, prgregset_t gregset)
 
 // new libthread_db of NPTL seem to require this symbol
 ps_err_e ps_get_thread_area();
+
+#endif
 
 #endif /* _PROC_SERVICE_H_ */

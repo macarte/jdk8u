@@ -42697,6 +42697,10 @@ $as_echo "$supports" >&6; }
     CCXXFLAGS_JDK="$CCXXFLAGS_JDK -D_ALLBSD_SOURCE"
   fi
 
+  if test "x$OPENJDK_TARGET_LIBC" = xmusl; then
+    CCXXFLAGS_JDK="$CCXXFLAGS_JDK -DMUSL_LIBC"
+  fi
+
   # Additional macosx handling
   if test "x$OPENJDK_TARGET_OS" = xmacosx; then
     if test "x$TOOLCHAIN_TYPE" = xgcc; then
