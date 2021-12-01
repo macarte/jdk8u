@@ -670,6 +670,7 @@ X_PRE_LIBS
 X_CFLAGS
 XMKMF
 FIXPATH
+INCLUDE_SA_ATTACH
 ZIP_DEBUGINFO_FILES
 DEBUG_BINARIES
 STRIP_POLICY
@@ -845,6 +846,7 @@ JDK_MICRO_VERSION
 JDK_MINOR_VERSION
 JDK_MAJOR_VERSION
 USER_RELEASE_SUFFIX
+ENABLE_CRS
 ENABLE_JFR
 COMPRESS_JARS
 UNLIMITED_CRYPTO
@@ -920,6 +922,7 @@ OPENJDK_TARGET_CPU_LEGACY
 REQUIRED_OS_VERSION
 REQUIRED_OS_NAME
 COMPILE_TYPE
+OPENJDK_TARGET_LIBC
 OPENJDK_TARGET_CPU_ENDIAN
 OPENJDK_TARGET_CPU_BITS
 OPENJDK_TARGET_CPU_ARCH
@@ -927,6 +930,7 @@ OPENJDK_TARGET_CPU
 OPENJDK_TARGET_OS_ENV
 OPENJDK_TARGET_OS_API
 OPENJDK_TARGET_OS
+OPENJDK_BUILD_LIBC
 OPENJDK_BUILD_CPU_ENDIAN
 OPENJDK_BUILD_CPU_BITS
 OPENJDK_BUILD_CPU_ARCH
@@ -1016,7 +1020,6 @@ infodir
 docdir
 oldincludedir
 includedir
-runstatedir
 localstatedir
 sharedstatedir
 sysconfdir
@@ -1064,10 +1067,13 @@ enable_hotspot_test_in_build
 with_cacerts_file
 enable_unlimited_crypto
 enable_jfr
+enable_crs
 with_milestone
 with_update_version
 with_user_release_suffix
 with_build_number
+with_macosx_bundle_name_base
+with_macosx_bundle_id_base
 with_vendor_name
 with_vendor_url
 with_vendor_bug_url
@@ -1096,6 +1102,7 @@ with_extra_asflags
 enable_debug_symbols
 enable_zip_debug_info
 with_native_debug_symbols
+enable_sa_attach
 enable_macosx_runtime_support
 with_x
 with_cups
@@ -1259,7 +1266,6 @@ datadir='${datarootdir}'
 sysconfdir='${prefix}/etc'
 sharedstatedir='${prefix}/com'
 localstatedir='${prefix}/var'
-runstatedir='${localstatedir}/run'
 includedir='${prefix}/include'
 oldincludedir='/usr/include'
 docdir='${datarootdir}/doc/${PACKAGE_TARNAME}'
@@ -1512,15 +1518,6 @@ do
   | -silent | --silent | --silen | --sile | --sil)
     silent=yes ;;
 
-  -runstatedir | --runstatedir | --runstatedi | --runstated \
-  | --runstate | --runstat | --runsta | --runst | --runs \
-  | --run | --ru | --r)
-    ac_prev=runstatedir ;;
-  -runstatedir=* | --runstatedir=* | --runstatedi=* | --runstated=* \
-  | --runstate=* | --runstat=* | --runsta=* | --runst=* | --runs=* \
-  | --run=* | --ru=* | --r=*)
-    runstatedir=$ac_optarg ;;
-
   -sbindir | --sbindir | --sbindi | --sbind | --sbin | --sbi | --sb)
     ac_prev=sbindir ;;
   -sbindir=* | --sbindir=* | --sbindi=* | --sbind=* | --sbin=* \
@@ -1658,7 +1655,7 @@ fi
 for ac_var in	exec_prefix prefix bindir sbindir libexecdir datarootdir \
 		datadir sysconfdir sharedstatedir localstatedir includedir \
 		oldincludedir docdir infodir htmldir dvidir pdfdir psdir \
-		libdir localedir mandir runstatedir
+		libdir localedir mandir
 do
   eval ac_val=\$$ac_var
   # Remove trailing slashes.
@@ -1811,7 +1808,6 @@ Fine tuning of the installation directories:
   --sysconfdir=DIR        read-only single-machine data [PREFIX/etc]
   --sharedstatedir=DIR    modifiable architecture-independent data [PREFIX/com]
   --localstatedir=DIR     modifiable single-machine data [PREFIX/var]
-  --runstatedir=DIR       modifiable per-process data [LOCALSTATEDIR/run]
   --libdir=DIR            object code libraries [EPREFIX/lib]
   --includedir=DIR        C header files [PREFIX/include]
   --oldincludedir=DIR     C header files for non-gcc [/usr/include]
@@ -1861,9 +1857,14 @@ Optional Features:
   --enable-unlimited-crypto
                           Enable unlimited crypto policy [disabled]
   --disable-jfr           Disable Java Flight Recorder support [enabled]
+  --enable-crs            Enable Connected Runtime Services support [depends
+                          on platform]
   --disable-debug-symbols disable generation of debug symbols [enabled]
   --disable-zip-debug-info
                           disable zipping of debug-info files [enabled]
+  --enable-sa-attach[=yes/no/auto]
+                          enable serviceability agent attach. Default is auto,
+                          where it is enabled if all dependencies are present.
   --enable-macosx-runtime-support
                           Deprecated. Option is kept for backwards
                           compatibility and is ignored
@@ -1918,6 +1919,13 @@ Optional Packages:
                           Add a custom string to the version string if build
                           number isn't set.[username_builddateb00]
   --with-build-number     Set build number value for build [b00]
+  --with-macosx-bundle-name-base
+                          Set the MacOSX Bundle Name base. This is the base
+                          name for calculating MacOSX Bundle Names. [not
+                          specified]
+  --with-macosx-bundle-id-base
+                          Set the MacOSX Bundle ID base. This is the base ID
+                          for calculating MacOSX Bundle IDs. [not specified]
   --with-vendor-name      Set vendor name. Among others, used to set the
                           'java.vendor' and 'java.vm.vendor' system
                           properties. [not specified]
@@ -3500,9 +3508,6 @@ ac_configure="$SHELL $ac_aux_dir/configure"  # Please don't use this var.
 
 
 
-# Code to run after AC_OUTPUT
-
-
 #
 # Copyright (c) 2011, 2012, Oracle and/or its affiliates. All rights reserved.
 # DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
@@ -3932,8 +3937,6 @@ pkgadd_help() {
 
 
 
-
-
 #
 # Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
 # DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
@@ -3963,6 +3966,11 @@ pkgadd_help() {
 
 
 
+
+
+###############################################################################
+# Check if the serviceability agent attach functionality should be included.
+#
 
 
 
@@ -4245,7 +4253,7 @@ TOOLCHAIN_DESCRIPTION_xlc="IBM XL C/C++"
 #
 # $1 = compiler to test (CC or CXX)
 # $2 = human readable name of compiler (C or C++)
-# $3 = list of compiler names to search for
+# $3 = compiler name to search for
 
 
 # Detect the core components of the toolchain, i.e. the compilers (CC and CXX),
@@ -4402,7 +4410,7 @@ VS_SDK_PLATFORM_NAME_2017=
 #CUSTOM_AUTOCONF_INCLUDE
 
 # Do not change or remove the following line, it is needed for consistency checks:
-DATE_WHEN_GENERATED=1625670527
+DATE_WHEN_GENERATED=1625068165
 
 ###############################################################################
 #
@@ -13665,10 +13673,23 @@ test -n "$target_alias" &&
       VAR_CPU_ENDIAN=little
       ;;
     arm*)
-      VAR_CPU=arm
-      VAR_CPU_ARCH=arm
-      VAR_CPU_BITS=32
-      VAR_CPU_ENDIAN=little
+      # Second argument is the os name from the trip/quad.
+      # on macos-aarch64, triplet returned by autoconf is
+      # arm-darwin*, but on darwin only aarch64 is present.
+      case "$build_os" in
+        *darwin*)
+          VAR_CPU=aarch64
+          VAR_CPU_ARCH=aarch64
+          VAR_CPU_BITS=64
+          VAR_CPU_ENDIAN=little
+        ;;
+        *)
+          VAR_CPU=arm
+          VAR_CPU_ARCH=arm
+          VAR_CPU_BITS=32
+          VAR_CPU_ENDIAN=little
+        ;;
+      esac
       ;;
     aarch64)
       VAR_CPU=aarch64
@@ -13739,10 +13760,19 @@ test -n "$target_alias" &&
 
 
 
+
+
   { $as_echo "$as_me:${as_lineno-$LINENO}: checking openjdk-build os-cpu" >&5
 $as_echo_n "checking openjdk-build os-cpu... " >&6; }
   { $as_echo "$as_me:${as_lineno-$LINENO}: result: $OPENJDK_BUILD_OS-$OPENJDK_BUILD_CPU" >&5
 $as_echo "$OPENJDK_BUILD_OS-$OPENJDK_BUILD_CPU" >&6; }
+
+  if test "x$OPENJDK_BUILD_OS" = "xlinux"; then
+    { $as_echo "$as_me:${as_lineno-$LINENO}: checking openjdk-build C library" >&5
+$as_echo_n "checking openjdk-build C library... " >&6; }
+    { $as_echo "$as_me:${as_lineno-$LINENO}: result: $OPENJDK_BUILD_LIBC" >&5
+$as_echo "$OPENJDK_BUILD_LIBC" >&6; }
+  fi
 
   # Convert the autoconf OS/CPU value to our own data, into the VAR_OS/CPU variables.
 
@@ -13799,6 +13829,7 @@ $as_echo "$OPENJDK_BUILD_OS-$OPENJDK_BUILD_CPU" >&6; }
       ;;
   esac
 
+
   # First argument is the cpu name from the trip/quad
   case "$host_cpu" in
     x86_64)
@@ -13814,10 +13845,23 @@ $as_echo "$OPENJDK_BUILD_OS-$OPENJDK_BUILD_CPU" >&6; }
       VAR_CPU_ENDIAN=little
       ;;
     arm*)
-      VAR_CPU=arm
-      VAR_CPU_ARCH=arm
-      VAR_CPU_BITS=32
-      VAR_CPU_ENDIAN=little
+      # Second argument is the os name from the trip/quad.
+      # on macos-aarch64, triplet returned by autoconf is
+      # arm-darwin*, but on darwin only aarch64 is present.
+      case "$host_os" in
+        *darwin*)
+          VAR_CPU=aarch64
+          VAR_CPU_ARCH=aarch64
+          VAR_CPU_BITS=64
+          VAR_CPU_ENDIAN=little
+        ;;
+        *)
+          VAR_CPU=arm
+          VAR_CPU_ARCH=arm
+          VAR_CPU_BITS=32
+          VAR_CPU_ENDIAN=little
+        ;;
+      esac
       ;;
     aarch64)
       VAR_CPU=aarch64
@@ -13888,10 +13932,19 @@ $as_echo "$OPENJDK_BUILD_OS-$OPENJDK_BUILD_CPU" >&6; }
 
 
 
+
+
   { $as_echo "$as_me:${as_lineno-$LINENO}: checking openjdk-target os-cpu" >&5
 $as_echo_n "checking openjdk-target os-cpu... " >&6; }
   { $as_echo "$as_me:${as_lineno-$LINENO}: result: $OPENJDK_TARGET_OS-$OPENJDK_TARGET_CPU" >&5
 $as_echo "$OPENJDK_TARGET_OS-$OPENJDK_TARGET_CPU" >&6; }
+
+  if test "x$OPENJDK_TARGET_OS" = "xlinux"; then
+    { $as_echo "$as_me:${as_lineno-$LINENO}: checking openjdk-target C library" >&5
+$as_echo_n "checking openjdk-target C library... " >&6; }
+    { $as_echo "$as_me:${as_lineno-$LINENO}: result: $OPENJDK_TARGET_LIBC" >&5
+$as_echo "$OPENJDK_TARGET_LIBC" >&6; }
+  fi
 
 
 
@@ -14663,6 +14716,9 @@ $as_echo "$with_jvm_variants" >&6; }
   if test "x$VAR_CPU" = xppc64 -o "x$VAR_CPU" = xppc64le ; then
     INCLUDE_SA=false
   fi
+  if test "x$OPENJDK_TARGET_CPU" = xaarch64 -a "x$OPENJDK_TARGET_OS" = "xmacosx" ; then
+    INCLUDE_SA=false
+  fi
 
 
   if test "x$OPENJDK_TARGET_OS" = "xmacosx"; then
@@ -14804,6 +14860,8 @@ $as_echo "$DEBUG_LEVEL" >&6; }
   fi
 
   #####
+
+
 
 
 
@@ -15230,9 +15288,9 @@ $as_echo "in current directory" >&6; }
       # is performed.
       filtered_files=`$ECHO "$files_present" \
           | $SED -e 's/config.log//g' \
-              -e 's/configure.log//g' \
-              -e 's/confdefs.h//g' \
-              -e 's/ //g' \
+	      -e 's/confdefs.h//g' \
+	      -e 's/fixpath.exe//g' \
+	      -e 's/ //g' \
           | $TR -d '\n'`
       if test "x$filtered_files" != x; then
         { $as_echo "$as_me:${as_lineno-$LINENO}: Current directory is $CURDIR." >&5
@@ -19897,6 +19955,32 @@ fi
 $as_echo "$ENABLE_JFR" >&6; }
 
 
+  ###############################################################################
+  #
+  # Enable or disable Connected Runtime Services
+  #
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking whether to build Connected Runtime Services" >&5
+$as_echo_n "checking whether to build Connected Runtime Services... " >&6; }
+  # Check whether --enable-crs was given.
+if test "${enable_crs+set}" = set; then :
+  enableval=$enable_crs;
+else
+  enable_crs=auto
+fi
+
+  if test "x$enable_crs" = "xno"; then
+    ENABLE_CRS=false
+  elif test "x$enable_crs" = "xyes"; then
+    ENABLE_CRS=true
+  elif test "x$enable_crs" = "xauto"; then
+    ENABLE_CRS=false
+  else
+    as_fn_error $? "--enable-crs must either be set to yes or no" "$LINENO" 5
+  fi
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ENABLE_CRS" >&5
+$as_echo "$ENABLE_CRS" >&6; }
+
+
 
   # Source the version numbers
   . $AUTOCONF_DIR/version-numbers
@@ -19982,6 +20066,40 @@ fi
 
 
 
+
+
+  # Set the MACOSX Bundle Name base
+
+# Check whether --with-macosx-bundle-name-base was given.
+if test "${with_macosx_bundle_name_base+set}" = set; then :
+  withval=$with_macosx_bundle_name_base;
+fi
+
+  if test "x$with_macosx_bundle_name_base" = xyes; then
+    as_fn_error $? "--with-macosx-bundle-name-base must have a value" "$LINENO" 5
+  elif  ! [[ $with_macosx_bundle_name_base =~ ^[[:print:]]*$ ]] ; then
+    as_fn_error $? "--with-macosx-bundle-name-base contains non-printing characters: $with_macosx_bundle_name_base" "$LINENO" 5
+  elif test "x$with_macosx_bundle_name_base" != x; then
+    # Set MACOSX_BUNDLE_NAME_BASE to the configured value.
+    MACOSX_BUNDLE_NAME_BASE="$with_macosx_bundle_name_base"
+  fi
+
+
+  # Set the MACOSX Bundle ID base
+
+# Check whether --with-macosx-bundle-id-base was given.
+if test "${with_macosx_bundle_id_base+set}" = set; then :
+  withval=$with_macosx_bundle_id_base;
+fi
+
+  if test "x$with_macosx_bundle_id_base" = xyes; then
+    as_fn_error $? "--with-macosx-bundle-id-base must have a value" "$LINENO" 5
+  elif  ! [[ $with_macosx_bundle_id_base =~ ^[[:print:]]*$ ]] ; then
+    as_fn_error $? "--with-macosx-bundle-id-base contains non-printing characters: $with_macosx_bundle_id_base" "$LINENO" 5
+  elif test "x$with_macosx_bundle_id_base" != x; then
+    # Set MACOSX_BUNDLE_ID_BASE to the configured value.
+    MACOSX_BUNDLE_ID_BASE="$with_macosx_bundle_id_base"
+  fi
 
 
   # The vendor name, if any
@@ -27050,10 +27168,9 @@ done
     if test -n "$TOOLCHAIN_PATH"; then
       PATH_save="$PATH"
       PATH="$TOOLCHAIN_PATH"
-      for ac_prog in $SEARCH_LIST
-do
-  # Extract the first word of "$ac_prog", so it can be a program name with args.
-set dummy $ac_prog; ac_word=$2
+      if test -n "$ac_tool_prefix"; then
+  # Extract the first word of "${ac_tool_prefix}$SEARCH_LIST", so it can be a program name with args.
+set dummy ${ac_tool_prefix}$SEARCH_LIST; ac_word=$2
 { $as_echo "$as_me:${as_lineno-$LINENO}: checking for $ac_word" >&5
 $as_echo_n "checking for $ac_word... " >&6; }
 if ${ac_cv_path_TOOLCHAIN_PATH_CC+:} false; then :
@@ -27092,20 +27209,73 @@ $as_echo "no" >&6; }
 fi
 
 
-  test -n "$TOOLCHAIN_PATH_CC" && break
+fi
+if test -z "$ac_cv_path_TOOLCHAIN_PATH_CC"; then
+  ac_pt_TOOLCHAIN_PATH_CC=$TOOLCHAIN_PATH_CC
+  # Extract the first word of "$SEARCH_LIST", so it can be a program name with args.
+set dummy $SEARCH_LIST; ac_word=$2
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for $ac_word" >&5
+$as_echo_n "checking for $ac_word... " >&6; }
+if ${ac_cv_path_ac_pt_TOOLCHAIN_PATH_CC+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  case $ac_pt_TOOLCHAIN_PATH_CC in
+  [\\/]* | ?:[\\/]*)
+  ac_cv_path_ac_pt_TOOLCHAIN_PATH_CC="$ac_pt_TOOLCHAIN_PATH_CC" # Let the user override the test with a path.
+  ;;
+  *)
+  as_save_IFS=$IFS; IFS=$PATH_SEPARATOR
+for as_dir in $PATH
+do
+  IFS=$as_save_IFS
+  test -z "$as_dir" && as_dir=.
+    for ac_exec_ext in '' $ac_executable_extensions; do
+  if as_fn_executable_p "$as_dir/$ac_word$ac_exec_ext"; then
+    ac_cv_path_ac_pt_TOOLCHAIN_PATH_CC="$as_dir/$ac_word$ac_exec_ext"
+    $as_echo "$as_me:${as_lineno-$LINENO}: found $as_dir/$ac_word$ac_exec_ext" >&5
+    break 2
+  fi
 done
+  done
+IFS=$as_save_IFS
+
+  ;;
+esac
+fi
+ac_pt_TOOLCHAIN_PATH_CC=$ac_cv_path_ac_pt_TOOLCHAIN_PATH_CC
+if test -n "$ac_pt_TOOLCHAIN_PATH_CC"; then
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_pt_TOOLCHAIN_PATH_CC" >&5
+$as_echo "$ac_pt_TOOLCHAIN_PATH_CC" >&6; }
+else
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+fi
+
+  if test "x$ac_pt_TOOLCHAIN_PATH_CC" = x; then
+    TOOLCHAIN_PATH_CC=""
+  else
+    case $cross_compiling:$ac_tool_warned in
+yes:)
+{ $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: using cross tools not prefixed with host triplet" >&5
+$as_echo "$as_me: WARNING: using cross tools not prefixed with host triplet" >&2;}
+ac_tool_warned=yes ;;
+esac
+    TOOLCHAIN_PATH_CC=$ac_pt_TOOLCHAIN_PATH_CC
+  fi
+else
+  TOOLCHAIN_PATH_CC="$ac_cv_path_TOOLCHAIN_PATH_CC"
+fi
 
       CC=$TOOLCHAIN_PATH_CC
       PATH="$PATH_save"
     fi
 
-    # AC_PATH_PROGS can't be run multiple times with the same variable,
+    # AC_PATH_TOOLS can't be run multiple times with the same variable,
     # so create a new name for this run.
     if test "x$CC" = x; then
-      for ac_prog in $TOOLCHAIN_CC_BINARY
-do
-  # Extract the first word of "$ac_prog", so it can be a program name with args.
-set dummy $ac_prog; ac_word=$2
+      if test -n "$ac_tool_prefix"; then
+  # Extract the first word of "${ac_tool_prefix}$SEARCH_LIST", so it can be a program name with args.
+set dummy ${ac_tool_prefix}$SEARCH_LIST; ac_word=$2
 { $as_echo "$as_me:${as_lineno-$LINENO}: checking for $ac_word" >&5
 $as_echo_n "checking for $ac_word... " >&6; }
 if ${ac_cv_path_POTENTIAL_CC+:} false; then :
@@ -27144,8 +27314,62 @@ $as_echo "no" >&6; }
 fi
 
 
-  test -n "$POTENTIAL_CC" && break
+fi
+if test -z "$ac_cv_path_POTENTIAL_CC"; then
+  ac_pt_POTENTIAL_CC=$POTENTIAL_CC
+  # Extract the first word of "$SEARCH_LIST", so it can be a program name with args.
+set dummy $SEARCH_LIST; ac_word=$2
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for $ac_word" >&5
+$as_echo_n "checking for $ac_word... " >&6; }
+if ${ac_cv_path_ac_pt_POTENTIAL_CC+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  case $ac_pt_POTENTIAL_CC in
+  [\\/]* | ?:[\\/]*)
+  ac_cv_path_ac_pt_POTENTIAL_CC="$ac_pt_POTENTIAL_CC" # Let the user override the test with a path.
+  ;;
+  *)
+  as_save_IFS=$IFS; IFS=$PATH_SEPARATOR
+for as_dir in $PATH
+do
+  IFS=$as_save_IFS
+  test -z "$as_dir" && as_dir=.
+    for ac_exec_ext in '' $ac_executable_extensions; do
+  if as_fn_executable_p "$as_dir/$ac_word$ac_exec_ext"; then
+    ac_cv_path_ac_pt_POTENTIAL_CC="$as_dir/$ac_word$ac_exec_ext"
+    $as_echo "$as_me:${as_lineno-$LINENO}: found $as_dir/$ac_word$ac_exec_ext" >&5
+    break 2
+  fi
 done
+  done
+IFS=$as_save_IFS
+
+  ;;
+esac
+fi
+ac_pt_POTENTIAL_CC=$ac_cv_path_ac_pt_POTENTIAL_CC
+if test -n "$ac_pt_POTENTIAL_CC"; then
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_pt_POTENTIAL_CC" >&5
+$as_echo "$ac_pt_POTENTIAL_CC" >&6; }
+else
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+fi
+
+  if test "x$ac_pt_POTENTIAL_CC" = x; then
+    POTENTIAL_CC=""
+  else
+    case $cross_compiling:$ac_tool_warned in
+yes:)
+{ $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: using cross tools not prefixed with host triplet" >&5
+$as_echo "$as_me: WARNING: using cross tools not prefixed with host triplet" >&2;}
+ac_tool_warned=yes ;;
+esac
+    POTENTIAL_CC=$ac_pt_POTENTIAL_CC
+  fi
+else
+  POTENTIAL_CC="$ac_cv_path_POTENTIAL_CC"
+fi
 
       CC=$POTENTIAL_CC
     fi
@@ -28791,10 +29015,9 @@ done
     if test -n "$TOOLCHAIN_PATH"; then
       PATH_save="$PATH"
       PATH="$TOOLCHAIN_PATH"
-      for ac_prog in $SEARCH_LIST
-do
-  # Extract the first word of "$ac_prog", so it can be a program name with args.
-set dummy $ac_prog; ac_word=$2
+      if test -n "$ac_tool_prefix"; then
+  # Extract the first word of "${ac_tool_prefix}$SEARCH_LIST", so it can be a program name with args.
+set dummy ${ac_tool_prefix}$SEARCH_LIST; ac_word=$2
 { $as_echo "$as_me:${as_lineno-$LINENO}: checking for $ac_word" >&5
 $as_echo_n "checking for $ac_word... " >&6; }
 if ${ac_cv_path_TOOLCHAIN_PATH_CXX+:} false; then :
@@ -28833,20 +29056,73 @@ $as_echo "no" >&6; }
 fi
 
 
-  test -n "$TOOLCHAIN_PATH_CXX" && break
+fi
+if test -z "$ac_cv_path_TOOLCHAIN_PATH_CXX"; then
+  ac_pt_TOOLCHAIN_PATH_CXX=$TOOLCHAIN_PATH_CXX
+  # Extract the first word of "$SEARCH_LIST", so it can be a program name with args.
+set dummy $SEARCH_LIST; ac_word=$2
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for $ac_word" >&5
+$as_echo_n "checking for $ac_word... " >&6; }
+if ${ac_cv_path_ac_pt_TOOLCHAIN_PATH_CXX+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  case $ac_pt_TOOLCHAIN_PATH_CXX in
+  [\\/]* | ?:[\\/]*)
+  ac_cv_path_ac_pt_TOOLCHAIN_PATH_CXX="$ac_pt_TOOLCHAIN_PATH_CXX" # Let the user override the test with a path.
+  ;;
+  *)
+  as_save_IFS=$IFS; IFS=$PATH_SEPARATOR
+for as_dir in $PATH
+do
+  IFS=$as_save_IFS
+  test -z "$as_dir" && as_dir=.
+    for ac_exec_ext in '' $ac_executable_extensions; do
+  if as_fn_executable_p "$as_dir/$ac_word$ac_exec_ext"; then
+    ac_cv_path_ac_pt_TOOLCHAIN_PATH_CXX="$as_dir/$ac_word$ac_exec_ext"
+    $as_echo "$as_me:${as_lineno-$LINENO}: found $as_dir/$ac_word$ac_exec_ext" >&5
+    break 2
+  fi
 done
+  done
+IFS=$as_save_IFS
+
+  ;;
+esac
+fi
+ac_pt_TOOLCHAIN_PATH_CXX=$ac_cv_path_ac_pt_TOOLCHAIN_PATH_CXX
+if test -n "$ac_pt_TOOLCHAIN_PATH_CXX"; then
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_pt_TOOLCHAIN_PATH_CXX" >&5
+$as_echo "$ac_pt_TOOLCHAIN_PATH_CXX" >&6; }
+else
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+fi
+
+  if test "x$ac_pt_TOOLCHAIN_PATH_CXX" = x; then
+    TOOLCHAIN_PATH_CXX=""
+  else
+    case $cross_compiling:$ac_tool_warned in
+yes:)
+{ $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: using cross tools not prefixed with host triplet" >&5
+$as_echo "$as_me: WARNING: using cross tools not prefixed with host triplet" >&2;}
+ac_tool_warned=yes ;;
+esac
+    TOOLCHAIN_PATH_CXX=$ac_pt_TOOLCHAIN_PATH_CXX
+  fi
+else
+  TOOLCHAIN_PATH_CXX="$ac_cv_path_TOOLCHAIN_PATH_CXX"
+fi
 
       CXX=$TOOLCHAIN_PATH_CXX
       PATH="$PATH_save"
     fi
 
-    # AC_PATH_PROGS can't be run multiple times with the same variable,
+    # AC_PATH_TOOLS can't be run multiple times with the same variable,
     # so create a new name for this run.
     if test "x$CXX" = x; then
-      for ac_prog in $TOOLCHAIN_CXX_BINARY
-do
-  # Extract the first word of "$ac_prog", so it can be a program name with args.
-set dummy $ac_prog; ac_word=$2
+      if test -n "$ac_tool_prefix"; then
+  # Extract the first word of "${ac_tool_prefix}$SEARCH_LIST", so it can be a program name with args.
+set dummy ${ac_tool_prefix}$SEARCH_LIST; ac_word=$2
 { $as_echo "$as_me:${as_lineno-$LINENO}: checking for $ac_word" >&5
 $as_echo_n "checking for $ac_word... " >&6; }
 if ${ac_cv_path_POTENTIAL_CXX+:} false; then :
@@ -28885,8 +29161,62 @@ $as_echo "no" >&6; }
 fi
 
 
-  test -n "$POTENTIAL_CXX" && break
+fi
+if test -z "$ac_cv_path_POTENTIAL_CXX"; then
+  ac_pt_POTENTIAL_CXX=$POTENTIAL_CXX
+  # Extract the first word of "$SEARCH_LIST", so it can be a program name with args.
+set dummy $SEARCH_LIST; ac_word=$2
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for $ac_word" >&5
+$as_echo_n "checking for $ac_word... " >&6; }
+if ${ac_cv_path_ac_pt_POTENTIAL_CXX+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  case $ac_pt_POTENTIAL_CXX in
+  [\\/]* | ?:[\\/]*)
+  ac_cv_path_ac_pt_POTENTIAL_CXX="$ac_pt_POTENTIAL_CXX" # Let the user override the test with a path.
+  ;;
+  *)
+  as_save_IFS=$IFS; IFS=$PATH_SEPARATOR
+for as_dir in $PATH
+do
+  IFS=$as_save_IFS
+  test -z "$as_dir" && as_dir=.
+    for ac_exec_ext in '' $ac_executable_extensions; do
+  if as_fn_executable_p "$as_dir/$ac_word$ac_exec_ext"; then
+    ac_cv_path_ac_pt_POTENTIAL_CXX="$as_dir/$ac_word$ac_exec_ext"
+    $as_echo "$as_me:${as_lineno-$LINENO}: found $as_dir/$ac_word$ac_exec_ext" >&5
+    break 2
+  fi
 done
+  done
+IFS=$as_save_IFS
+
+  ;;
+esac
+fi
+ac_pt_POTENTIAL_CXX=$ac_cv_path_ac_pt_POTENTIAL_CXX
+if test -n "$ac_pt_POTENTIAL_CXX"; then
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_pt_POTENTIAL_CXX" >&5
+$as_echo "$ac_pt_POTENTIAL_CXX" >&6; }
+else
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+fi
+
+  if test "x$ac_pt_POTENTIAL_CXX" = x; then
+    POTENTIAL_CXX=""
+  else
+    case $cross_compiling:$ac_tool_warned in
+yes:)
+{ $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: using cross tools not prefixed with host triplet" >&5
+$as_echo "$as_me: WARNING: using cross tools not prefixed with host triplet" >&2;}
+ac_tool_warned=yes ;;
+esac
+    POTENTIAL_CXX=$ac_pt_POTENTIAL_CXX
+  fi
+else
+  POTENTIAL_CXX="$ac_cv_path_POTENTIAL_CXX"
+fi
 
       CXX=$POTENTIAL_CXX
     fi
@@ -41761,7 +42091,7 @@ $as_echo "$ac_cv_c_bigendian" >&6; }
       SET_SHARED_LIBRARY_MAPFILE='-Xlinker -version-script=$1'
     fi
   elif test "x$TOOLCHAIN_TYPE" = xclang; then
-    PICFLAG=''
+    PICFLAG="-fPIC"
     C_FLAG_REORDER=''
     CXX_FLAG_REORDER=''
 
@@ -41871,6 +42201,14 @@ $as_echo "$ac_cv_c_bigendian" >&6; }
     fi
     ASFLAGS_DEBUG_SYMBOLS="-g"
   elif test "x$TOOLCHAIN_TYPE" = xclang; then
+    if test "x$OPENJDK_TARGET_CPU_BITS" = "x64" && test "x$DEBUG_LEVEL" = "xfastdebug"; then
+      CFLAGS_DEBUG_SYMBOLS="-g1"
+      CXXFLAGS_DEBUG_SYMBOLS="-g1"
+    else
+      CFLAGS_DEBUG_SYMBOLS="-g"
+      CXXFLAGS_DEBUG_SYMBOLS="-g"
+    fi
+    ASFLAGS_DEBUG_SYMBOLS="-g"
     CFLAGS_DEBUG_SYMBOLS="-g"
     CXXFLAGS_DEBUG_SYMBOLS="-g"
   elif test "x$TOOLCHAIN_TYPE" = xsolstudio; then
@@ -42609,6 +42947,7 @@ $as_echo "$supports" >&6; }
           -D_STATIC_CPPLIB -D_DISABLE_DEPRECATE_STATIC_CPPLIB"
     fi
   fi
+  FDLIBM_CFLAGS="$FDLIBM_CFLAGS $with_extra_cflags"
 
 
   ###############################################################################
@@ -42697,10 +43036,6 @@ $as_echo "$supports" >&6; }
     CCXXFLAGS_JDK="$CCXXFLAGS_JDK -D_ALLBSD_SOURCE"
   fi
 
-  if test "x$OPENJDK_TARGET_LIBC" = xmusl; then
-    CCXXFLAGS_JDK="$CCXXFLAGS_JDK -DMUSL_LIBC"
-  fi
-
   # Additional macosx handling
   if test "x$OPENJDK_TARGET_OS" = xmacosx; then
     if test "x$TOOLCHAIN_TYPE" = xgcc; then
@@ -42711,7 +43046,23 @@ $as_echo "$supports" >&6; }
       # newer than the given OS version and makes the linked binaries compatible
       # even if built on a newer version of the OS.
       # The expected format is X.Y.Z
-      MACOSX_VERSION_MIN=10.7.0
+      MACOSX_VERSION_MIN=10.9.0
+
+
+      # The macro takes the version with no dots, ex: 1070
+      # Let the flags variables get resolved in make for easier override on make
+      # command line.
+      CCXXFLAGS_JDK="$CCXXFLAGS_JDK -DMAC_OS_X_VERSION_MAX_ALLOWED=\$(subst .,,\$(MACOSX_VERSION_MIN)) -mmacosx-version-min=\$(MACOSX_VERSION_MIN)"
+      LDFLAGS_JDK="$LDFLAGS_JDK -mmacosx-version-min=\$(MACOSX_VERSION_MIN)"
+    elif test "x$TOOLCHAIN_TYPE" = xclang; then
+      # FIXME: This needs to be exported in spec.gmk due to closed legacy code.
+      # FIXME: clean this up, and/or move it elsewhere.
+
+      # Setting these parameters makes it an error to link to macosx APIs that are
+      # newer than the given OS version and makes the linked binaries compatible
+      # even if built on a newer version of the OS.
+      # The expected format is X.Y.Z
+      MACOSX_VERSION_MIN=10.9.0
 
 
       # The macro takes the version with no dots, ex: 1070
@@ -42787,6 +43138,23 @@ $as_echo "$supports" >&6; }
     LDFLAGS_JDKEXE="${LDFLAGS_JDK} /STACK:$LDFLAGS_STACK_SIZE"
   else
     if test "x$TOOLCHAIN_TYPE" = xgcc -o "x$TOOLCHAIN_TYPE" = xclang; then
+      # If this is a --hash-style=gnu system, use --hash-style=both, why?
+      # We have previously set HAS_GNU_HASH if this is the case
+      if test -n "$HAS_GNU_HASH"; then
+        LDFLAGS_JDK="${LDFLAGS_JDK} -Xlinker --hash-style=both "
+      fi
+      if test "x$OPENJDK_TARGET_OS" = xlinux; then
+        # And since we now know that the linker is gnu, then add:
+        #   -z defs, to forbid undefined symbols in object files
+        #   -z noexecstack, to mark stack regions as non-executable
+        LDFLAGS_JDK="${LDFLAGS_JDK} -Xlinker -z -Xlinker defs -Xlinker -z -Xlinker noexecstack"
+        if test "x$DEBUG_LEVEL" = "xrelease"; then
+          # When building release libraries, tell the linker optimize them.
+          # Should this be supplied to the OSS linker as well?
+          LDFLAGS_JDK="${LDFLAGS_JDK} -Xlinker -O1"
+        fi
+      fi
+    elif test "x$TOOLCHAIN_TYPE" = xclang; then
       # If this is a --hash-style=gnu system, use --hash-style=both, why?
       # We have previously set HAS_GNU_HASH if this is the case
       if test -n "$HAS_GNU_HASH"; then
@@ -43200,6 +43568,96 @@ $as_echo "$as_me: --with-native-debug-symbols not specified. Using values from -
 
 
 
+
+
+
+
+  # Test for serviceability agent attach dependencies
+  # Check whether --enable-sa-attach was given.
+if test "${enable_sa_attach+set}" = set; then :
+  enableval=$enable_sa_attach;
+fi
+
+
+  SA_ATTACH_DEP_MISSING=false
+
+  for ac_header in thread_db.h
+do :
+  ac_fn_cxx_check_header_mongrel "$LINENO" "thread_db.h" "ac_cv_header_thread_db_h" "$ac_includes_default"
+if test "x$ac_cv_header_thread_db_h" = xyes; then :
+  cat >>confdefs.h <<_ACEOF
+#define HAVE_THREAD_DB_H 1
+_ACEOF
+ SA_ATTACH_HEADERS_OK=yes
+else
+  SA_ATTACH_HEADERS_OK=no
+fi
+
+done
+
+  if test "x$SA_ATTACH_HEADERS_OK" != "xyes"; then
+    SA_ATTACH_DEP_MISSING=true
+  fi
+
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking if serviceability agent attach should be included" >&5
+$as_echo_n "checking if serviceability agent attach should be included... " >&6; }
+  if test "x$enable_sa_attach" = "xyes"; then
+    if test "x$SA_ATTACH_DEP_MISSING" = "xtrue"; then
+      { $as_echo "$as_me:${as_lineno-$LINENO}: result: no, missing dependencies" >&5
+$as_echo "no, missing dependencies" >&6; }
+
+  # Print a helpful message on how to acquire the necessary build dependency.
+  # sa-attach is the help tag: freetype, cups, pulse, alsa etc
+  MISSING_DEPENDENCY=sa-attach
+
+  if test "x$OPENJDK_BUILD_OS_ENV" = "xwindows.cygwin"; then
+    cygwin_help $MISSING_DEPENDENCY
+  elif test "x$OPENJDK_BUILD_OS_ENV" = "xwindows.msys"; then
+    msys_help $MISSING_DEPENDENCY
+  else
+    PKGHANDLER_COMMAND=
+
+    case $PKGHANDLER in
+      apt-get)
+        apt_help     $MISSING_DEPENDENCY ;;
+      yum)
+        yum_help     $MISSING_DEPENDENCY ;;
+      port)
+        port_help    $MISSING_DEPENDENCY ;;
+      pkgutil)
+        pkgutil_help $MISSING_DEPENDENCY ;;
+      pkgadd)
+        pkgadd_help  $MISSING_DEPENDENCY ;;
+    esac
+
+    if test "x$PKGHANDLER_COMMAND" != x; then
+      HELP_MSG="You might be able to fix this by running '$PKGHANDLER_COMMAND'."
+    fi
+  fi
+
+      as_fn_error $? "Cannot enable sa-attach with missing dependencies. See above. $HELP_MSG" "$LINENO" 5
+    else
+      INCLUDE_SA_ATTACH=true
+      { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes, forced" >&5
+$as_echo "yes, forced" >&6; }
+    fi
+  elif test "x$enable_sa_attach" = "xno"; then
+    INCLUDE_SA_ATTACH=false
+    { $as_echo "$as_me:${as_lineno-$LINENO}: result: no, forced" >&5
+$as_echo "no, forced" >&6; }
+  elif test "x$enable_sa_attach" = "xauto" || test "x$enable_sa_attach" = "x"; then
+    if test "x$SA_ATTACH_DEP_MISSING" = "xtrue"; then
+      INCLUDE_SA_ATTACH=false
+      { $as_echo "$as_me:${as_lineno-$LINENO}: result: no, missing dependencies" >&5
+$as_echo "no, missing dependencies" >&6; }
+    else
+      INCLUDE_SA_ATTACH=true
+      { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes, dependencies present" >&5
+$as_echo "yes, dependencies present" >&6; }
+    fi
+  else
+    as_fn_error $? "Invalid value for --enable-sa-attach: $enable_sa_attach" "$LINENO" 5
+  fi
 
 
 
@@ -48227,8 +48685,7 @@ ac_compiler_gnu=$ac_cv_cxx_compiler_gnu
           #include<ft2build.h>
           #include FT_FREETYPE_H
           int main () {
-            FT_Library library;
-            FT_Init_FreeType(&library);
+            FT_Init_FreeType(NULL);
             return 0;
           }
 
@@ -49205,7 +49662,7 @@ $as_echo "$has_dynamic_libstdcxx" >&6; }
     # Test if stdc++ can be linked statically.
     { $as_echo "$as_me:${as_lineno-$LINENO}: checking if static link of stdc++ is possible" >&5
 $as_echo_n "checking if static link of stdc++ is possible... " >&6; }
-    STATIC_STDCXX_FLAGS="-Wl,-Bstatic -lstdc++ -lgcc -Wl,-Bdynamic"
+    STATIC_STDCXX_FLAGS="-Wl,-Bstatic -lstdc++ -static-libgcc -Wl,-Bdynamic"
     ac_ext=cpp
 ac_cpp='$CXXCPP $CPPFLAGS'
 ac_compile='$CXX -c $CXXFLAGS $CPPFLAGS conftest.$ac_ext >&5'
@@ -49334,38 +49791,71 @@ fi
 	# Put the nasty error message in config.log where it belongs
 	echo "$LIBFFI_PKG_ERRORS" >&5
 
-	as_fn_error $? "Package requirements (libffi) were not met:
-
-$LIBFFI_PKG_ERRORS
-
-Consider adjusting the PKG_CONFIG_PATH environment variable if you
-installed software in a non-standard prefix.
-
-Alternatively, you may set the environment variables LIBFFI_CFLAGS
-and LIBFFI_LIBS to avoid the need to call pkg-config.
-See the pkg-config man page for more details.
-" "$LINENO" 5
+	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+                LIBFFI_FOUND=no
 elif test $pkg_failed = untried; then
-	{ { $as_echo "$as_me:${as_lineno-$LINENO}: error: in \`$ac_pwd':" >&5
-$as_echo "$as_me: error: in \`$ac_pwd':" >&2;}
-as_fn_error $? "The pkg-config script could not be found or is too old.  Make sure it
-is in your PATH or set the PKG_CONFIG environment variable to the full
-path to pkg-config.
-
-Alternatively, you may set the environment variables LIBFFI_CFLAGS
-and LIBFFI_LIBS to avoid the need to call pkg-config.
-See the pkg-config man page for more details.
-
-To get pkg-config, see <http://pkg-config.freedesktop.org/>.
-See \`config.log' for more details" "$LINENO" 5; }
+	LIBFFI_FOUND=no
 else
 	LIBFFI_CFLAGS=$pkg_cv_LIBFFI_CFLAGS
 	LIBFFI_LIBS=$pkg_cv_LIBFFI_LIBS
         { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
 $as_echo "yes" >&6; }
-	:
+	LIBFFI_FOUND=yes
+fi
+    # on macos we need a special case for system's libffi as
+    # headers are located only in sdk in $SYSROOT and in ffi subfolder
+    if test "x$LIBFFI_FOUND" = xno; then
+      if test "x$SDKPATH" != "x"; then
+        as_ac_Header=`$as_echo "ac_cv_header_$SDKPATH/usr/include/ffi/ffi.h" | $as_tr_sh`
+ac_fn_cxx_check_header_mongrel "$LINENO" "$SDKPATH/usr/include/ffi/ffi.h" "$as_ac_Header" "$ac_includes_default"
+if eval test \"x\$"$as_ac_Header"\" = x"yes"; then :
+
+              LIBFFI_FOUND=yes
+              LIBFFI_CFLAGS="-I${SDKPATH}/usr/include/ffi"
+              LIBFFI_LIBS=-lffi
+
+else
+  LIBFFI_FOUND=no
+
 fi
 
+
+      fi
+    fi
+    if test "x$LIBFFI_FOUND" = xno; then
+
+  # Print a helpful message on how to acquire the necessary build dependency.
+  # ffi is the help tag: freetype, cups, pulse, alsa etc
+  MISSING_DEPENDENCY=ffi
+
+  if test "x$OPENJDK_BUILD_OS_ENV" = "xwindows.cygwin"; then
+    cygwin_help $MISSING_DEPENDENCY
+  elif test "x$OPENJDK_BUILD_OS_ENV" = "xwindows.msys"; then
+    msys_help $MISSING_DEPENDENCY
+  else
+    PKGHANDLER_COMMAND=
+
+    case $PKGHANDLER in
+      apt-get)
+        apt_help     $MISSING_DEPENDENCY ;;
+      yum)
+        yum_help     $MISSING_DEPENDENCY ;;
+      port)
+        port_help    $MISSING_DEPENDENCY ;;
+      pkgutil)
+        pkgutil_help $MISSING_DEPENDENCY ;;
+      pkgadd)
+        pkgadd_help  $MISSING_DEPENDENCY ;;
+    esac
+
+    if test "x$PKGHANDLER_COMMAND" != x; then
+      HELP_MSG="You might be able to fix this by running '$PKGHANDLER_COMMAND'."
+    fi
+  fi
+
+      as_fn_error $? "Could not find libffi! $HELP_MSG" "$LINENO" 5
+    fi
   fi
 
   if test "x$JVM_VARIANT_ZEROSHARK" = xtrue; then
@@ -49510,128 +50000,6 @@ $as_echo_n "checking found $DLL_NAME architecture... " >&6; }
       { $as_echo "$as_me:${as_lineno-$LINENO}: result: ok" >&5
 $as_echo "ok" >&6; }
       MSVC_DLL="$POSSIBLE_MSVC_DLL"
-
-  if test "x$OPENJDK_BUILD_OS_ENV" = "xwindows.cygwin"; then
-
-  # Input might be given as Windows format, start by converting to
-  # unix format.
-  path="$MSVC_DLL"
-  new_path=`$CYGPATH -u "$path"`
-
-  # Cygwin tries to hide some aspects of the Windows file system, such that binaries are
-  # named .exe but called without that suffix. Therefore, "foo" and "foo.exe" are considered
-  # the same file, most of the time (as in "test -f"). But not when running cygpath -s, then
-  # "foo.exe" is OK but "foo" is an error.
-  #
-  # This test is therefore slightly more accurate than "test -f" to check for file precense.
-  # It is also a way to make sure we got the proper file name for the real test later on.
-  test_shortpath=`$CYGPATH -s -m "$new_path" 2> /dev/null`
-  if test "x$test_shortpath" = x; then
-    { $as_echo "$as_me:${as_lineno-$LINENO}: The path of MSVC_DLL, which resolves as \"$path\", is invalid." >&5
-$as_echo "$as_me: The path of MSVC_DLL, which resolves as \"$path\", is invalid." >&6;}
-    as_fn_error $? "Cannot locate the the path of MSVC_DLL" "$LINENO" 5
-  fi
-
-  # Call helper function which possibly converts this using DOS-style short mode.
-  # If so, the updated path is stored in $new_path.
-
-  input_path="$new_path"
-  # Check if we need to convert this using DOS-style short mode. If the path
-  # contains just simple characters, use it. Otherwise (spaces, weird characters),
-  # take no chances and rewrite it.
-  # Note: m4 eats our [], so we need to use [ and ] instead.
-  has_forbidden_chars=`$ECHO "$input_path" | $GREP [^-._/a-zA-Z0-9]`
-  if test "x$has_forbidden_chars" != x; then
-    # Now convert it to mixed DOS-style, short mode (no spaces, and / instead of \)
-    shortmode_path=`$CYGPATH -s -m -a "$input_path"`
-    path_after_shortmode=`$CYGPATH -u "$shortmode_path"`
-    if test "x$path_after_shortmode" != "x$input_to_shortpath"; then
-      # Going to short mode and back again did indeed matter. Since short mode is
-      # case insensitive, let's make it lowercase to improve readability.
-      shortmode_path=`$ECHO "$shortmode_path" | $TR 'ABCDEFGHIJKLMNOPQRSTUVWXYZ' 'abcdefghijklmnopqrstuvwxyz'`
-      # Now convert it back to Unix-style (cygpath)
-      input_path=`$CYGPATH -u "$shortmode_path"`
-      new_path="$input_path"
-    fi
-  fi
-
-  test_cygdrive_prefix=`$ECHO $input_path | $GREP ^/cygdrive/`
-  if test "x$test_cygdrive_prefix" = x; then
-    # As a simple fix, exclude /usr/bin since it's not a real path.
-    if test "x`$ECHO $new_path | $GREP ^/usr/bin/`" = x; then
-      # The path is in a Cygwin special directory (e.g. /home). We need this converted to
-      # a path prefixed by /cygdrive for fixpath to work.
-      new_path="$CYGWIN_ROOT_PATH$input_path"
-    fi
-  fi
-
-
-  if test "x$path" != "x$new_path"; then
-    MSVC_DLL="$new_path"
-    { $as_echo "$as_me:${as_lineno-$LINENO}: Rewriting MSVC_DLL to \"$new_path\"" >&5
-$as_echo "$as_me: Rewriting MSVC_DLL to \"$new_path\"" >&6;}
-  fi
-
-  elif test "x$OPENJDK_BUILD_OS_ENV" = "xwindows.msys"; then
-
-  path="$MSVC_DLL"
-  has_colon=`$ECHO $path | $GREP ^.:`
-  new_path="$path"
-  if test "x$has_colon" = x; then
-    # Not in mixed or Windows style, start by that.
-    new_path=`cmd //c echo $path`
-  fi
-
-
-  input_path="$new_path"
-  # Check if we need to convert this using DOS-style short mode. If the path
-  # contains just simple characters, use it. Otherwise (spaces, weird characters),
-  # take no chances and rewrite it.
-  # Note: m4 eats our [], so we need to use [ and ] instead.
-  has_forbidden_chars=`$ECHO "$input_path" | $GREP [^-_/:a-zA-Z0-9]`
-  if test "x$has_forbidden_chars" != x; then
-    # Now convert it to mixed DOS-style, short mode (no spaces, and / instead of \)
-    new_path=`cmd /c "for %A in (\"$input_path\") do @echo %~sA"|$TR \\\\\\\\ / | $TR 'ABCDEFGHIJKLMNOPQRSTUVWXYZ' 'abcdefghijklmnopqrstuvwxyz'`
-  fi
-
-
-  windows_path="$new_path"
-  if test "x$OPENJDK_BUILD_OS_ENV" = "xwindows.cygwin"; then
-    unix_path=`$CYGPATH -u "$windows_path"`
-    new_path="$unix_path"
-  elif test "x$OPENJDK_BUILD_OS_ENV" = "xwindows.msys"; then
-    unix_path=`$ECHO "$windows_path" | $SED -e 's,^\\(.\\):,/\\1,g' -e 's,\\\\,/,g'`
-    new_path="$unix_path"
-  fi
-
-  if test "x$path" != "x$new_path"; then
-    MSVC_DLL="$new_path"
-    { $as_echo "$as_me:${as_lineno-$LINENO}: Rewriting MSVC_DLL to \"$new_path\"" >&5
-$as_echo "$as_me: Rewriting MSVC_DLL to \"$new_path\"" >&6;}
-  fi
-
-  # Save the first 10 bytes of this path to the storage, so fixpath can work.
-  all_fixpath_prefixes=("${all_fixpath_prefixes[@]}" "${new_path:0:10}")
-
-  else
-    # We're on a posix platform. Hooray! :)
-    path="$MSVC_DLL"
-    has_space=`$ECHO "$path" | $GREP " "`
-    if test "x$has_space" != x; then
-      { $as_echo "$as_me:${as_lineno-$LINENO}: The path of MSVC_DLL, which resolves as \"$path\", is invalid." >&5
-$as_echo "$as_me: The path of MSVC_DLL, which resolves as \"$path\", is invalid." >&6;}
-      as_fn_error $? "Spaces are not allowed in this path." "$LINENO" 5
-    fi
-
-    # Use eval to expand a potential ~
-    eval path="$path"
-    if test ! -f "$path" && test ! -d "$path"; then
-      as_fn_error $? "The path of MSVC_DLL, which resolves as \"$path\", is not found." "$LINENO" 5
-    fi
-
-    MSVC_DLL="`cd "$path"; $THEPWDCMD -L`"
-  fi
-
       { $as_echo "$as_me:${as_lineno-$LINENO}: checking for $DLL_NAME" >&5
 $as_echo_n "checking for $DLL_NAME... " >&6; }
       { $as_echo "$as_me:${as_lineno-$LINENO}: result: $MSVC_DLL" >&5
@@ -49680,128 +50048,6 @@ $as_echo_n "checking found $DLL_NAME architecture... " >&6; }
       { $as_echo "$as_me:${as_lineno-$LINENO}: result: ok" >&5
 $as_echo "ok" >&6; }
       MSVC_DLL="$POSSIBLE_MSVC_DLL"
-
-  if test "x$OPENJDK_BUILD_OS_ENV" = "xwindows.cygwin"; then
-
-  # Input might be given as Windows format, start by converting to
-  # unix format.
-  path="$MSVC_DLL"
-  new_path=`$CYGPATH -u "$path"`
-
-  # Cygwin tries to hide some aspects of the Windows file system, such that binaries are
-  # named .exe but called without that suffix. Therefore, "foo" and "foo.exe" are considered
-  # the same file, most of the time (as in "test -f"). But not when running cygpath -s, then
-  # "foo.exe" is OK but "foo" is an error.
-  #
-  # This test is therefore slightly more accurate than "test -f" to check for file precense.
-  # It is also a way to make sure we got the proper file name for the real test later on.
-  test_shortpath=`$CYGPATH -s -m "$new_path" 2> /dev/null`
-  if test "x$test_shortpath" = x; then
-    { $as_echo "$as_me:${as_lineno-$LINENO}: The path of MSVC_DLL, which resolves as \"$path\", is invalid." >&5
-$as_echo "$as_me: The path of MSVC_DLL, which resolves as \"$path\", is invalid." >&6;}
-    as_fn_error $? "Cannot locate the the path of MSVC_DLL" "$LINENO" 5
-  fi
-
-  # Call helper function which possibly converts this using DOS-style short mode.
-  # If so, the updated path is stored in $new_path.
-
-  input_path="$new_path"
-  # Check if we need to convert this using DOS-style short mode. If the path
-  # contains just simple characters, use it. Otherwise (spaces, weird characters),
-  # take no chances and rewrite it.
-  # Note: m4 eats our [], so we need to use [ and ] instead.
-  has_forbidden_chars=`$ECHO "$input_path" | $GREP [^-._/a-zA-Z0-9]`
-  if test "x$has_forbidden_chars" != x; then
-    # Now convert it to mixed DOS-style, short mode (no spaces, and / instead of \)
-    shortmode_path=`$CYGPATH -s -m -a "$input_path"`
-    path_after_shortmode=`$CYGPATH -u "$shortmode_path"`
-    if test "x$path_after_shortmode" != "x$input_to_shortpath"; then
-      # Going to short mode and back again did indeed matter. Since short mode is
-      # case insensitive, let's make it lowercase to improve readability.
-      shortmode_path=`$ECHO "$shortmode_path" | $TR 'ABCDEFGHIJKLMNOPQRSTUVWXYZ' 'abcdefghijklmnopqrstuvwxyz'`
-      # Now convert it back to Unix-style (cygpath)
-      input_path=`$CYGPATH -u "$shortmode_path"`
-      new_path="$input_path"
-    fi
-  fi
-
-  test_cygdrive_prefix=`$ECHO $input_path | $GREP ^/cygdrive/`
-  if test "x$test_cygdrive_prefix" = x; then
-    # As a simple fix, exclude /usr/bin since it's not a real path.
-    if test "x`$ECHO $new_path | $GREP ^/usr/bin/`" = x; then
-      # The path is in a Cygwin special directory (e.g. /home). We need this converted to
-      # a path prefixed by /cygdrive for fixpath to work.
-      new_path="$CYGWIN_ROOT_PATH$input_path"
-    fi
-  fi
-
-
-  if test "x$path" != "x$new_path"; then
-    MSVC_DLL="$new_path"
-    { $as_echo "$as_me:${as_lineno-$LINENO}: Rewriting MSVC_DLL to \"$new_path\"" >&5
-$as_echo "$as_me: Rewriting MSVC_DLL to \"$new_path\"" >&6;}
-  fi
-
-  elif test "x$OPENJDK_BUILD_OS_ENV" = "xwindows.msys"; then
-
-  path="$MSVC_DLL"
-  has_colon=`$ECHO $path | $GREP ^.:`
-  new_path="$path"
-  if test "x$has_colon" = x; then
-    # Not in mixed or Windows style, start by that.
-    new_path=`cmd //c echo $path`
-  fi
-
-
-  input_path="$new_path"
-  # Check if we need to convert this using DOS-style short mode. If the path
-  # contains just simple characters, use it. Otherwise (spaces, weird characters),
-  # take no chances and rewrite it.
-  # Note: m4 eats our [], so we need to use [ and ] instead.
-  has_forbidden_chars=`$ECHO "$input_path" | $GREP [^-_/:a-zA-Z0-9]`
-  if test "x$has_forbidden_chars" != x; then
-    # Now convert it to mixed DOS-style, short mode (no spaces, and / instead of \)
-    new_path=`cmd /c "for %A in (\"$input_path\") do @echo %~sA"|$TR \\\\\\\\ / | $TR 'ABCDEFGHIJKLMNOPQRSTUVWXYZ' 'abcdefghijklmnopqrstuvwxyz'`
-  fi
-
-
-  windows_path="$new_path"
-  if test "x$OPENJDK_BUILD_OS_ENV" = "xwindows.cygwin"; then
-    unix_path=`$CYGPATH -u "$windows_path"`
-    new_path="$unix_path"
-  elif test "x$OPENJDK_BUILD_OS_ENV" = "xwindows.msys"; then
-    unix_path=`$ECHO "$windows_path" | $SED -e 's,^\\(.\\):,/\\1,g' -e 's,\\\\,/,g'`
-    new_path="$unix_path"
-  fi
-
-  if test "x$path" != "x$new_path"; then
-    MSVC_DLL="$new_path"
-    { $as_echo "$as_me:${as_lineno-$LINENO}: Rewriting MSVC_DLL to \"$new_path\"" >&5
-$as_echo "$as_me: Rewriting MSVC_DLL to \"$new_path\"" >&6;}
-  fi
-
-  # Save the first 10 bytes of this path to the storage, so fixpath can work.
-  all_fixpath_prefixes=("${all_fixpath_prefixes[@]}" "${new_path:0:10}")
-
-  else
-    # We're on a posix platform. Hooray! :)
-    path="$MSVC_DLL"
-    has_space=`$ECHO "$path" | $GREP " "`
-    if test "x$has_space" != x; then
-      { $as_echo "$as_me:${as_lineno-$LINENO}: The path of MSVC_DLL, which resolves as \"$path\", is invalid." >&5
-$as_echo "$as_me: The path of MSVC_DLL, which resolves as \"$path\", is invalid." >&6;}
-      as_fn_error $? "Spaces are not allowed in this path." "$LINENO" 5
-    fi
-
-    # Use eval to expand a potential ~
-    eval path="$path"
-    if test ! -f "$path" && test ! -d "$path"; then
-      as_fn_error $? "The path of MSVC_DLL, which resolves as \"$path\", is not found." "$LINENO" 5
-    fi
-
-    MSVC_DLL="`cd "$path"; $THEPWDCMD -L`"
-  fi
-
       { $as_echo "$as_me:${as_lineno-$LINENO}: checking for $DLL_NAME" >&5
 $as_echo_n "checking for $DLL_NAME... " >&6; }
       { $as_echo "$as_me:${as_lineno-$LINENO}: result: $MSVC_DLL" >&5
@@ -49997,128 +50243,6 @@ $as_echo_n "checking found $DLL_NAME architecture... " >&6; }
       { $as_echo "$as_me:${as_lineno-$LINENO}: result: ok" >&5
 $as_echo "ok" >&6; }
       MSVC_DLL="$POSSIBLE_MSVC_DLL"
-
-  if test "x$OPENJDK_BUILD_OS_ENV" = "xwindows.cygwin"; then
-
-  # Input might be given as Windows format, start by converting to
-  # unix format.
-  path="$MSVC_DLL"
-  new_path=`$CYGPATH -u "$path"`
-
-  # Cygwin tries to hide some aspects of the Windows file system, such that binaries are
-  # named .exe but called without that suffix. Therefore, "foo" and "foo.exe" are considered
-  # the same file, most of the time (as in "test -f"). But not when running cygpath -s, then
-  # "foo.exe" is OK but "foo" is an error.
-  #
-  # This test is therefore slightly more accurate than "test -f" to check for file precense.
-  # It is also a way to make sure we got the proper file name for the real test later on.
-  test_shortpath=`$CYGPATH -s -m "$new_path" 2> /dev/null`
-  if test "x$test_shortpath" = x; then
-    { $as_echo "$as_me:${as_lineno-$LINENO}: The path of MSVC_DLL, which resolves as \"$path\", is invalid." >&5
-$as_echo "$as_me: The path of MSVC_DLL, which resolves as \"$path\", is invalid." >&6;}
-    as_fn_error $? "Cannot locate the the path of MSVC_DLL" "$LINENO" 5
-  fi
-
-  # Call helper function which possibly converts this using DOS-style short mode.
-  # If so, the updated path is stored in $new_path.
-
-  input_path="$new_path"
-  # Check if we need to convert this using DOS-style short mode. If the path
-  # contains just simple characters, use it. Otherwise (spaces, weird characters),
-  # take no chances and rewrite it.
-  # Note: m4 eats our [], so we need to use [ and ] instead.
-  has_forbidden_chars=`$ECHO "$input_path" | $GREP [^-._/a-zA-Z0-9]`
-  if test "x$has_forbidden_chars" != x; then
-    # Now convert it to mixed DOS-style, short mode (no spaces, and / instead of \)
-    shortmode_path=`$CYGPATH -s -m -a "$input_path"`
-    path_after_shortmode=`$CYGPATH -u "$shortmode_path"`
-    if test "x$path_after_shortmode" != "x$input_to_shortpath"; then
-      # Going to short mode and back again did indeed matter. Since short mode is
-      # case insensitive, let's make it lowercase to improve readability.
-      shortmode_path=`$ECHO "$shortmode_path" | $TR 'ABCDEFGHIJKLMNOPQRSTUVWXYZ' 'abcdefghijklmnopqrstuvwxyz'`
-      # Now convert it back to Unix-style (cygpath)
-      input_path=`$CYGPATH -u "$shortmode_path"`
-      new_path="$input_path"
-    fi
-  fi
-
-  test_cygdrive_prefix=`$ECHO $input_path | $GREP ^/cygdrive/`
-  if test "x$test_cygdrive_prefix" = x; then
-    # As a simple fix, exclude /usr/bin since it's not a real path.
-    if test "x`$ECHO $new_path | $GREP ^/usr/bin/`" = x; then
-      # The path is in a Cygwin special directory (e.g. /home). We need this converted to
-      # a path prefixed by /cygdrive for fixpath to work.
-      new_path="$CYGWIN_ROOT_PATH$input_path"
-    fi
-  fi
-
-
-  if test "x$path" != "x$new_path"; then
-    MSVC_DLL="$new_path"
-    { $as_echo "$as_me:${as_lineno-$LINENO}: Rewriting MSVC_DLL to \"$new_path\"" >&5
-$as_echo "$as_me: Rewriting MSVC_DLL to \"$new_path\"" >&6;}
-  fi
-
-  elif test "x$OPENJDK_BUILD_OS_ENV" = "xwindows.msys"; then
-
-  path="$MSVC_DLL"
-  has_colon=`$ECHO $path | $GREP ^.:`
-  new_path="$path"
-  if test "x$has_colon" = x; then
-    # Not in mixed or Windows style, start by that.
-    new_path=`cmd //c echo $path`
-  fi
-
-
-  input_path="$new_path"
-  # Check if we need to convert this using DOS-style short mode. If the path
-  # contains just simple characters, use it. Otherwise (spaces, weird characters),
-  # take no chances and rewrite it.
-  # Note: m4 eats our [], so we need to use [ and ] instead.
-  has_forbidden_chars=`$ECHO "$input_path" | $GREP [^-_/:a-zA-Z0-9]`
-  if test "x$has_forbidden_chars" != x; then
-    # Now convert it to mixed DOS-style, short mode (no spaces, and / instead of \)
-    new_path=`cmd /c "for %A in (\"$input_path\") do @echo %~sA"|$TR \\\\\\\\ / | $TR 'ABCDEFGHIJKLMNOPQRSTUVWXYZ' 'abcdefghijklmnopqrstuvwxyz'`
-  fi
-
-
-  windows_path="$new_path"
-  if test "x$OPENJDK_BUILD_OS_ENV" = "xwindows.cygwin"; then
-    unix_path=`$CYGPATH -u "$windows_path"`
-    new_path="$unix_path"
-  elif test "x$OPENJDK_BUILD_OS_ENV" = "xwindows.msys"; then
-    unix_path=`$ECHO "$windows_path" | $SED -e 's,^\\(.\\):,/\\1,g' -e 's,\\\\,/,g'`
-    new_path="$unix_path"
-  fi
-
-  if test "x$path" != "x$new_path"; then
-    MSVC_DLL="$new_path"
-    { $as_echo "$as_me:${as_lineno-$LINENO}: Rewriting MSVC_DLL to \"$new_path\"" >&5
-$as_echo "$as_me: Rewriting MSVC_DLL to \"$new_path\"" >&6;}
-  fi
-
-  # Save the first 10 bytes of this path to the storage, so fixpath can work.
-  all_fixpath_prefixes=("${all_fixpath_prefixes[@]}" "${new_path:0:10}")
-
-  else
-    # We're on a posix platform. Hooray! :)
-    path="$MSVC_DLL"
-    has_space=`$ECHO "$path" | $GREP " "`
-    if test "x$has_space" != x; then
-      { $as_echo "$as_me:${as_lineno-$LINENO}: The path of MSVC_DLL, which resolves as \"$path\", is invalid." >&5
-$as_echo "$as_me: The path of MSVC_DLL, which resolves as \"$path\", is invalid." >&6;}
-      as_fn_error $? "Spaces are not allowed in this path." "$LINENO" 5
-    fi
-
-    # Use eval to expand a potential ~
-    eval path="$path"
-    if test ! -f "$path" && test ! -d "$path"; then
-      as_fn_error $? "The path of MSVC_DLL, which resolves as \"$path\", is not found." "$LINENO" 5
-    fi
-
-    MSVC_DLL="`cd "$path"; $THEPWDCMD -L`"
-  fi
-
       { $as_echo "$as_me:${as_lineno-$LINENO}: checking for $DLL_NAME" >&5
 $as_echo_n "checking for $DLL_NAME... " >&6; }
       { $as_echo "$as_me:${as_lineno-$LINENO}: result: $MSVC_DLL" >&5
@@ -50169,128 +50293,6 @@ $as_echo_n "checking found $DLL_NAME architecture... " >&6; }
       { $as_echo "$as_me:${as_lineno-$LINENO}: result: ok" >&5
 $as_echo "ok" >&6; }
       MSVC_DLL="$POSSIBLE_MSVC_DLL"
-
-  if test "x$OPENJDK_BUILD_OS_ENV" = "xwindows.cygwin"; then
-
-  # Input might be given as Windows format, start by converting to
-  # unix format.
-  path="$MSVC_DLL"
-  new_path=`$CYGPATH -u "$path"`
-
-  # Cygwin tries to hide some aspects of the Windows file system, such that binaries are
-  # named .exe but called without that suffix. Therefore, "foo" and "foo.exe" are considered
-  # the same file, most of the time (as in "test -f"). But not when running cygpath -s, then
-  # "foo.exe" is OK but "foo" is an error.
-  #
-  # This test is therefore slightly more accurate than "test -f" to check for file precense.
-  # It is also a way to make sure we got the proper file name for the real test later on.
-  test_shortpath=`$CYGPATH -s -m "$new_path" 2> /dev/null`
-  if test "x$test_shortpath" = x; then
-    { $as_echo "$as_me:${as_lineno-$LINENO}: The path of MSVC_DLL, which resolves as \"$path\", is invalid." >&5
-$as_echo "$as_me: The path of MSVC_DLL, which resolves as \"$path\", is invalid." >&6;}
-    as_fn_error $? "Cannot locate the the path of MSVC_DLL" "$LINENO" 5
-  fi
-
-  # Call helper function which possibly converts this using DOS-style short mode.
-  # If so, the updated path is stored in $new_path.
-
-  input_path="$new_path"
-  # Check if we need to convert this using DOS-style short mode. If the path
-  # contains just simple characters, use it. Otherwise (spaces, weird characters),
-  # take no chances and rewrite it.
-  # Note: m4 eats our [], so we need to use [ and ] instead.
-  has_forbidden_chars=`$ECHO "$input_path" | $GREP [^-._/a-zA-Z0-9]`
-  if test "x$has_forbidden_chars" != x; then
-    # Now convert it to mixed DOS-style, short mode (no spaces, and / instead of \)
-    shortmode_path=`$CYGPATH -s -m -a "$input_path"`
-    path_after_shortmode=`$CYGPATH -u "$shortmode_path"`
-    if test "x$path_after_shortmode" != "x$input_to_shortpath"; then
-      # Going to short mode and back again did indeed matter. Since short mode is
-      # case insensitive, let's make it lowercase to improve readability.
-      shortmode_path=`$ECHO "$shortmode_path" | $TR 'ABCDEFGHIJKLMNOPQRSTUVWXYZ' 'abcdefghijklmnopqrstuvwxyz'`
-      # Now convert it back to Unix-style (cygpath)
-      input_path=`$CYGPATH -u "$shortmode_path"`
-      new_path="$input_path"
-    fi
-  fi
-
-  test_cygdrive_prefix=`$ECHO $input_path | $GREP ^/cygdrive/`
-  if test "x$test_cygdrive_prefix" = x; then
-    # As a simple fix, exclude /usr/bin since it's not a real path.
-    if test "x`$ECHO $new_path | $GREP ^/usr/bin/`" = x; then
-      # The path is in a Cygwin special directory (e.g. /home). We need this converted to
-      # a path prefixed by /cygdrive for fixpath to work.
-      new_path="$CYGWIN_ROOT_PATH$input_path"
-    fi
-  fi
-
-
-  if test "x$path" != "x$new_path"; then
-    MSVC_DLL="$new_path"
-    { $as_echo "$as_me:${as_lineno-$LINENO}: Rewriting MSVC_DLL to \"$new_path\"" >&5
-$as_echo "$as_me: Rewriting MSVC_DLL to \"$new_path\"" >&6;}
-  fi
-
-  elif test "x$OPENJDK_BUILD_OS_ENV" = "xwindows.msys"; then
-
-  path="$MSVC_DLL"
-  has_colon=`$ECHO $path | $GREP ^.:`
-  new_path="$path"
-  if test "x$has_colon" = x; then
-    # Not in mixed or Windows style, start by that.
-    new_path=`cmd //c echo $path`
-  fi
-
-
-  input_path="$new_path"
-  # Check if we need to convert this using DOS-style short mode. If the path
-  # contains just simple characters, use it. Otherwise (spaces, weird characters),
-  # take no chances and rewrite it.
-  # Note: m4 eats our [], so we need to use [ and ] instead.
-  has_forbidden_chars=`$ECHO "$input_path" | $GREP [^-_/:a-zA-Z0-9]`
-  if test "x$has_forbidden_chars" != x; then
-    # Now convert it to mixed DOS-style, short mode (no spaces, and / instead of \)
-    new_path=`cmd /c "for %A in (\"$input_path\") do @echo %~sA"|$TR \\\\\\\\ / | $TR 'ABCDEFGHIJKLMNOPQRSTUVWXYZ' 'abcdefghijklmnopqrstuvwxyz'`
-  fi
-
-
-  windows_path="$new_path"
-  if test "x$OPENJDK_BUILD_OS_ENV" = "xwindows.cygwin"; then
-    unix_path=`$CYGPATH -u "$windows_path"`
-    new_path="$unix_path"
-  elif test "x$OPENJDK_BUILD_OS_ENV" = "xwindows.msys"; then
-    unix_path=`$ECHO "$windows_path" | $SED -e 's,^\\(.\\):,/\\1,g' -e 's,\\\\,/,g'`
-    new_path="$unix_path"
-  fi
-
-  if test "x$path" != "x$new_path"; then
-    MSVC_DLL="$new_path"
-    { $as_echo "$as_me:${as_lineno-$LINENO}: Rewriting MSVC_DLL to \"$new_path\"" >&5
-$as_echo "$as_me: Rewriting MSVC_DLL to \"$new_path\"" >&6;}
-  fi
-
-  # Save the first 10 bytes of this path to the storage, so fixpath can work.
-  all_fixpath_prefixes=("${all_fixpath_prefixes[@]}" "${new_path:0:10}")
-
-  else
-    # We're on a posix platform. Hooray! :)
-    path="$MSVC_DLL"
-    has_space=`$ECHO "$path" | $GREP " "`
-    if test "x$has_space" != x; then
-      { $as_echo "$as_me:${as_lineno-$LINENO}: The path of MSVC_DLL, which resolves as \"$path\", is invalid." >&5
-$as_echo "$as_me: The path of MSVC_DLL, which resolves as \"$path\", is invalid." >&6;}
-      as_fn_error $? "Spaces are not allowed in this path." "$LINENO" 5
-    fi
-
-    # Use eval to expand a potential ~
-    eval path="$path"
-    if test ! -f "$path" && test ! -d "$path"; then
-      as_fn_error $? "The path of MSVC_DLL, which resolves as \"$path\", is not found." "$LINENO" 5
-    fi
-
-    MSVC_DLL="`cd "$path"; $THEPWDCMD -L`"
-  fi
-
       { $as_echo "$as_me:${as_lineno-$LINENO}: checking for $DLL_NAME" >&5
 $as_echo_n "checking for $DLL_NAME... " >&6; }
       { $as_echo "$as_me:${as_lineno-$LINENO}: result: $MSVC_DLL" >&5
@@ -50350,128 +50352,6 @@ $as_echo_n "checking found $DLL_NAME architecture... " >&6; }
       { $as_echo "$as_me:${as_lineno-$LINENO}: result: ok" >&5
 $as_echo "ok" >&6; }
       MSVC_DLL="$POSSIBLE_MSVC_DLL"
-
-  if test "x$OPENJDK_BUILD_OS_ENV" = "xwindows.cygwin"; then
-
-  # Input might be given as Windows format, start by converting to
-  # unix format.
-  path="$MSVC_DLL"
-  new_path=`$CYGPATH -u "$path"`
-
-  # Cygwin tries to hide some aspects of the Windows file system, such that binaries are
-  # named .exe but called without that suffix. Therefore, "foo" and "foo.exe" are considered
-  # the same file, most of the time (as in "test -f"). But not when running cygpath -s, then
-  # "foo.exe" is OK but "foo" is an error.
-  #
-  # This test is therefore slightly more accurate than "test -f" to check for file precense.
-  # It is also a way to make sure we got the proper file name for the real test later on.
-  test_shortpath=`$CYGPATH -s -m "$new_path" 2> /dev/null`
-  if test "x$test_shortpath" = x; then
-    { $as_echo "$as_me:${as_lineno-$LINENO}: The path of MSVC_DLL, which resolves as \"$path\", is invalid." >&5
-$as_echo "$as_me: The path of MSVC_DLL, which resolves as \"$path\", is invalid." >&6;}
-    as_fn_error $? "Cannot locate the the path of MSVC_DLL" "$LINENO" 5
-  fi
-
-  # Call helper function which possibly converts this using DOS-style short mode.
-  # If so, the updated path is stored in $new_path.
-
-  input_path="$new_path"
-  # Check if we need to convert this using DOS-style short mode. If the path
-  # contains just simple characters, use it. Otherwise (spaces, weird characters),
-  # take no chances and rewrite it.
-  # Note: m4 eats our [], so we need to use [ and ] instead.
-  has_forbidden_chars=`$ECHO "$input_path" | $GREP [^-._/a-zA-Z0-9]`
-  if test "x$has_forbidden_chars" != x; then
-    # Now convert it to mixed DOS-style, short mode (no spaces, and / instead of \)
-    shortmode_path=`$CYGPATH -s -m -a "$input_path"`
-    path_after_shortmode=`$CYGPATH -u "$shortmode_path"`
-    if test "x$path_after_shortmode" != "x$input_to_shortpath"; then
-      # Going to short mode and back again did indeed matter. Since short mode is
-      # case insensitive, let's make it lowercase to improve readability.
-      shortmode_path=`$ECHO "$shortmode_path" | $TR 'ABCDEFGHIJKLMNOPQRSTUVWXYZ' 'abcdefghijklmnopqrstuvwxyz'`
-      # Now convert it back to Unix-style (cygpath)
-      input_path=`$CYGPATH -u "$shortmode_path"`
-      new_path="$input_path"
-    fi
-  fi
-
-  test_cygdrive_prefix=`$ECHO $input_path | $GREP ^/cygdrive/`
-  if test "x$test_cygdrive_prefix" = x; then
-    # As a simple fix, exclude /usr/bin since it's not a real path.
-    if test "x`$ECHO $new_path | $GREP ^/usr/bin/`" = x; then
-      # The path is in a Cygwin special directory (e.g. /home). We need this converted to
-      # a path prefixed by /cygdrive for fixpath to work.
-      new_path="$CYGWIN_ROOT_PATH$input_path"
-    fi
-  fi
-
-
-  if test "x$path" != "x$new_path"; then
-    MSVC_DLL="$new_path"
-    { $as_echo "$as_me:${as_lineno-$LINENO}: Rewriting MSVC_DLL to \"$new_path\"" >&5
-$as_echo "$as_me: Rewriting MSVC_DLL to \"$new_path\"" >&6;}
-  fi
-
-  elif test "x$OPENJDK_BUILD_OS_ENV" = "xwindows.msys"; then
-
-  path="$MSVC_DLL"
-  has_colon=`$ECHO $path | $GREP ^.:`
-  new_path="$path"
-  if test "x$has_colon" = x; then
-    # Not in mixed or Windows style, start by that.
-    new_path=`cmd //c echo $path`
-  fi
-
-
-  input_path="$new_path"
-  # Check if we need to convert this using DOS-style short mode. If the path
-  # contains just simple characters, use it. Otherwise (spaces, weird characters),
-  # take no chances and rewrite it.
-  # Note: m4 eats our [], so we need to use [ and ] instead.
-  has_forbidden_chars=`$ECHO "$input_path" | $GREP [^-_/:a-zA-Z0-9]`
-  if test "x$has_forbidden_chars" != x; then
-    # Now convert it to mixed DOS-style, short mode (no spaces, and / instead of \)
-    new_path=`cmd /c "for %A in (\"$input_path\") do @echo %~sA"|$TR \\\\\\\\ / | $TR 'ABCDEFGHIJKLMNOPQRSTUVWXYZ' 'abcdefghijklmnopqrstuvwxyz'`
-  fi
-
-
-  windows_path="$new_path"
-  if test "x$OPENJDK_BUILD_OS_ENV" = "xwindows.cygwin"; then
-    unix_path=`$CYGPATH -u "$windows_path"`
-    new_path="$unix_path"
-  elif test "x$OPENJDK_BUILD_OS_ENV" = "xwindows.msys"; then
-    unix_path=`$ECHO "$windows_path" | $SED -e 's,^\\(.\\):,/\\1,g' -e 's,\\\\,/,g'`
-    new_path="$unix_path"
-  fi
-
-  if test "x$path" != "x$new_path"; then
-    MSVC_DLL="$new_path"
-    { $as_echo "$as_me:${as_lineno-$LINENO}: Rewriting MSVC_DLL to \"$new_path\"" >&5
-$as_echo "$as_me: Rewriting MSVC_DLL to \"$new_path\"" >&6;}
-  fi
-
-  # Save the first 10 bytes of this path to the storage, so fixpath can work.
-  all_fixpath_prefixes=("${all_fixpath_prefixes[@]}" "${new_path:0:10}")
-
-  else
-    # We're on a posix platform. Hooray! :)
-    path="$MSVC_DLL"
-    has_space=`$ECHO "$path" | $GREP " "`
-    if test "x$has_space" != x; then
-      { $as_echo "$as_me:${as_lineno-$LINENO}: The path of MSVC_DLL, which resolves as \"$path\", is invalid." >&5
-$as_echo "$as_me: The path of MSVC_DLL, which resolves as \"$path\", is invalid." >&6;}
-      as_fn_error $? "Spaces are not allowed in this path." "$LINENO" 5
-    fi
-
-    # Use eval to expand a potential ~
-    eval path="$path"
-    if test ! -f "$path" && test ! -d "$path"; then
-      as_fn_error $? "The path of MSVC_DLL, which resolves as \"$path\", is not found." "$LINENO" 5
-    fi
-
-    MSVC_DLL="`cd "$path"; $THEPWDCMD -L`"
-  fi
-
       { $as_echo "$as_me:${as_lineno-$LINENO}: checking for $DLL_NAME" >&5
 $as_echo_n "checking for $DLL_NAME... " >&6; }
       { $as_echo "$as_me:${as_lineno-$LINENO}: result: $MSVC_DLL" >&5
@@ -50538,128 +50418,6 @@ $as_echo_n "checking found $DLL_NAME architecture... " >&6; }
       { $as_echo "$as_me:${as_lineno-$LINENO}: result: ok" >&5
 $as_echo "ok" >&6; }
       MSVC_DLL="$POSSIBLE_MSVC_DLL"
-
-  if test "x$OPENJDK_BUILD_OS_ENV" = "xwindows.cygwin"; then
-
-  # Input might be given as Windows format, start by converting to
-  # unix format.
-  path="$MSVC_DLL"
-  new_path=`$CYGPATH -u "$path"`
-
-  # Cygwin tries to hide some aspects of the Windows file system, such that binaries are
-  # named .exe but called without that suffix. Therefore, "foo" and "foo.exe" are considered
-  # the same file, most of the time (as in "test -f"). But not when running cygpath -s, then
-  # "foo.exe" is OK but "foo" is an error.
-  #
-  # This test is therefore slightly more accurate than "test -f" to check for file precense.
-  # It is also a way to make sure we got the proper file name for the real test later on.
-  test_shortpath=`$CYGPATH -s -m "$new_path" 2> /dev/null`
-  if test "x$test_shortpath" = x; then
-    { $as_echo "$as_me:${as_lineno-$LINENO}: The path of MSVC_DLL, which resolves as \"$path\", is invalid." >&5
-$as_echo "$as_me: The path of MSVC_DLL, which resolves as \"$path\", is invalid." >&6;}
-    as_fn_error $? "Cannot locate the the path of MSVC_DLL" "$LINENO" 5
-  fi
-
-  # Call helper function which possibly converts this using DOS-style short mode.
-  # If so, the updated path is stored in $new_path.
-
-  input_path="$new_path"
-  # Check if we need to convert this using DOS-style short mode. If the path
-  # contains just simple characters, use it. Otherwise (spaces, weird characters),
-  # take no chances and rewrite it.
-  # Note: m4 eats our [], so we need to use [ and ] instead.
-  has_forbidden_chars=`$ECHO "$input_path" | $GREP [^-._/a-zA-Z0-9]`
-  if test "x$has_forbidden_chars" != x; then
-    # Now convert it to mixed DOS-style, short mode (no spaces, and / instead of \)
-    shortmode_path=`$CYGPATH -s -m -a "$input_path"`
-    path_after_shortmode=`$CYGPATH -u "$shortmode_path"`
-    if test "x$path_after_shortmode" != "x$input_to_shortpath"; then
-      # Going to short mode and back again did indeed matter. Since short mode is
-      # case insensitive, let's make it lowercase to improve readability.
-      shortmode_path=`$ECHO "$shortmode_path" | $TR 'ABCDEFGHIJKLMNOPQRSTUVWXYZ' 'abcdefghijklmnopqrstuvwxyz'`
-      # Now convert it back to Unix-style (cygpath)
-      input_path=`$CYGPATH -u "$shortmode_path"`
-      new_path="$input_path"
-    fi
-  fi
-
-  test_cygdrive_prefix=`$ECHO $input_path | $GREP ^/cygdrive/`
-  if test "x$test_cygdrive_prefix" = x; then
-    # As a simple fix, exclude /usr/bin since it's not a real path.
-    if test "x`$ECHO $new_path | $GREP ^/usr/bin/`" = x; then
-      # The path is in a Cygwin special directory (e.g. /home). We need this converted to
-      # a path prefixed by /cygdrive for fixpath to work.
-      new_path="$CYGWIN_ROOT_PATH$input_path"
-    fi
-  fi
-
-
-  if test "x$path" != "x$new_path"; then
-    MSVC_DLL="$new_path"
-    { $as_echo "$as_me:${as_lineno-$LINENO}: Rewriting MSVC_DLL to \"$new_path\"" >&5
-$as_echo "$as_me: Rewriting MSVC_DLL to \"$new_path\"" >&6;}
-  fi
-
-  elif test "x$OPENJDK_BUILD_OS_ENV" = "xwindows.msys"; then
-
-  path="$MSVC_DLL"
-  has_colon=`$ECHO $path | $GREP ^.:`
-  new_path="$path"
-  if test "x$has_colon" = x; then
-    # Not in mixed or Windows style, start by that.
-    new_path=`cmd //c echo $path`
-  fi
-
-
-  input_path="$new_path"
-  # Check if we need to convert this using DOS-style short mode. If the path
-  # contains just simple characters, use it. Otherwise (spaces, weird characters),
-  # take no chances and rewrite it.
-  # Note: m4 eats our [], so we need to use [ and ] instead.
-  has_forbidden_chars=`$ECHO "$input_path" | $GREP [^-_/:a-zA-Z0-9]`
-  if test "x$has_forbidden_chars" != x; then
-    # Now convert it to mixed DOS-style, short mode (no spaces, and / instead of \)
-    new_path=`cmd /c "for %A in (\"$input_path\") do @echo %~sA"|$TR \\\\\\\\ / | $TR 'ABCDEFGHIJKLMNOPQRSTUVWXYZ' 'abcdefghijklmnopqrstuvwxyz'`
-  fi
-
-
-  windows_path="$new_path"
-  if test "x$OPENJDK_BUILD_OS_ENV" = "xwindows.cygwin"; then
-    unix_path=`$CYGPATH -u "$windows_path"`
-    new_path="$unix_path"
-  elif test "x$OPENJDK_BUILD_OS_ENV" = "xwindows.msys"; then
-    unix_path=`$ECHO "$windows_path" | $SED -e 's,^\\(.\\):,/\\1,g' -e 's,\\\\,/,g'`
-    new_path="$unix_path"
-  fi
-
-  if test "x$path" != "x$new_path"; then
-    MSVC_DLL="$new_path"
-    { $as_echo "$as_me:${as_lineno-$LINENO}: Rewriting MSVC_DLL to \"$new_path\"" >&5
-$as_echo "$as_me: Rewriting MSVC_DLL to \"$new_path\"" >&6;}
-  fi
-
-  # Save the first 10 bytes of this path to the storage, so fixpath can work.
-  all_fixpath_prefixes=("${all_fixpath_prefixes[@]}" "${new_path:0:10}")
-
-  else
-    # We're on a posix platform. Hooray! :)
-    path="$MSVC_DLL"
-    has_space=`$ECHO "$path" | $GREP " "`
-    if test "x$has_space" != x; then
-      { $as_echo "$as_me:${as_lineno-$LINENO}: The path of MSVC_DLL, which resolves as \"$path\", is invalid." >&5
-$as_echo "$as_me: The path of MSVC_DLL, which resolves as \"$path\", is invalid." >&6;}
-      as_fn_error $? "Spaces are not allowed in this path." "$LINENO" 5
-    fi
-
-    # Use eval to expand a potential ~
-    eval path="$path"
-    if test ! -f "$path" && test ! -d "$path"; then
-      as_fn_error $? "The path of MSVC_DLL, which resolves as \"$path\", is not found." "$LINENO" 5
-    fi
-
-    MSVC_DLL="`cd "$path"; $THEPWDCMD -L`"
-  fi
-
       { $as_echo "$as_me:${as_lineno-$LINENO}: checking for $DLL_NAME" >&5
 $as_echo_n "checking for $DLL_NAME... " >&6; }
       { $as_echo "$as_me:${as_lineno-$LINENO}: result: $MSVC_DLL" >&5
@@ -50723,128 +50481,6 @@ $as_echo_n "checking found $DLL_NAME architecture... " >&6; }
       { $as_echo "$as_me:${as_lineno-$LINENO}: result: ok" >&5
 $as_echo "ok" >&6; }
       MSVC_DLL="$POSSIBLE_MSVC_DLL"
-
-  if test "x$OPENJDK_BUILD_OS_ENV" = "xwindows.cygwin"; then
-
-  # Input might be given as Windows format, start by converting to
-  # unix format.
-  path="$MSVC_DLL"
-  new_path=`$CYGPATH -u "$path"`
-
-  # Cygwin tries to hide some aspects of the Windows file system, such that binaries are
-  # named .exe but called without that suffix. Therefore, "foo" and "foo.exe" are considered
-  # the same file, most of the time (as in "test -f"). But not when running cygpath -s, then
-  # "foo.exe" is OK but "foo" is an error.
-  #
-  # This test is therefore slightly more accurate than "test -f" to check for file precense.
-  # It is also a way to make sure we got the proper file name for the real test later on.
-  test_shortpath=`$CYGPATH -s -m "$new_path" 2> /dev/null`
-  if test "x$test_shortpath" = x; then
-    { $as_echo "$as_me:${as_lineno-$LINENO}: The path of MSVC_DLL, which resolves as \"$path\", is invalid." >&5
-$as_echo "$as_me: The path of MSVC_DLL, which resolves as \"$path\", is invalid." >&6;}
-    as_fn_error $? "Cannot locate the the path of MSVC_DLL" "$LINENO" 5
-  fi
-
-  # Call helper function which possibly converts this using DOS-style short mode.
-  # If so, the updated path is stored in $new_path.
-
-  input_path="$new_path"
-  # Check if we need to convert this using DOS-style short mode. If the path
-  # contains just simple characters, use it. Otherwise (spaces, weird characters),
-  # take no chances and rewrite it.
-  # Note: m4 eats our [], so we need to use [ and ] instead.
-  has_forbidden_chars=`$ECHO "$input_path" | $GREP [^-._/a-zA-Z0-9]`
-  if test "x$has_forbidden_chars" != x; then
-    # Now convert it to mixed DOS-style, short mode (no spaces, and / instead of \)
-    shortmode_path=`$CYGPATH -s -m -a "$input_path"`
-    path_after_shortmode=`$CYGPATH -u "$shortmode_path"`
-    if test "x$path_after_shortmode" != "x$input_to_shortpath"; then
-      # Going to short mode and back again did indeed matter. Since short mode is
-      # case insensitive, let's make it lowercase to improve readability.
-      shortmode_path=`$ECHO "$shortmode_path" | $TR 'ABCDEFGHIJKLMNOPQRSTUVWXYZ' 'abcdefghijklmnopqrstuvwxyz'`
-      # Now convert it back to Unix-style (cygpath)
-      input_path=`$CYGPATH -u "$shortmode_path"`
-      new_path="$input_path"
-    fi
-  fi
-
-  test_cygdrive_prefix=`$ECHO $input_path | $GREP ^/cygdrive/`
-  if test "x$test_cygdrive_prefix" = x; then
-    # As a simple fix, exclude /usr/bin since it's not a real path.
-    if test "x`$ECHO $new_path | $GREP ^/usr/bin/`" = x; then
-      # The path is in a Cygwin special directory (e.g. /home). We need this converted to
-      # a path prefixed by /cygdrive for fixpath to work.
-      new_path="$CYGWIN_ROOT_PATH$input_path"
-    fi
-  fi
-
-
-  if test "x$path" != "x$new_path"; then
-    MSVC_DLL="$new_path"
-    { $as_echo "$as_me:${as_lineno-$LINENO}: Rewriting MSVC_DLL to \"$new_path\"" >&5
-$as_echo "$as_me: Rewriting MSVC_DLL to \"$new_path\"" >&6;}
-  fi
-
-  elif test "x$OPENJDK_BUILD_OS_ENV" = "xwindows.msys"; then
-
-  path="$MSVC_DLL"
-  has_colon=`$ECHO $path | $GREP ^.:`
-  new_path="$path"
-  if test "x$has_colon" = x; then
-    # Not in mixed or Windows style, start by that.
-    new_path=`cmd //c echo $path`
-  fi
-
-
-  input_path="$new_path"
-  # Check if we need to convert this using DOS-style short mode. If the path
-  # contains just simple characters, use it. Otherwise (spaces, weird characters),
-  # take no chances and rewrite it.
-  # Note: m4 eats our [], so we need to use [ and ] instead.
-  has_forbidden_chars=`$ECHO "$input_path" | $GREP [^-_/:a-zA-Z0-9]`
-  if test "x$has_forbidden_chars" != x; then
-    # Now convert it to mixed DOS-style, short mode (no spaces, and / instead of \)
-    new_path=`cmd /c "for %A in (\"$input_path\") do @echo %~sA"|$TR \\\\\\\\ / | $TR 'ABCDEFGHIJKLMNOPQRSTUVWXYZ' 'abcdefghijklmnopqrstuvwxyz'`
-  fi
-
-
-  windows_path="$new_path"
-  if test "x$OPENJDK_BUILD_OS_ENV" = "xwindows.cygwin"; then
-    unix_path=`$CYGPATH -u "$windows_path"`
-    new_path="$unix_path"
-  elif test "x$OPENJDK_BUILD_OS_ENV" = "xwindows.msys"; then
-    unix_path=`$ECHO "$windows_path" | $SED -e 's,^\\(.\\):,/\\1,g' -e 's,\\\\,/,g'`
-    new_path="$unix_path"
-  fi
-
-  if test "x$path" != "x$new_path"; then
-    MSVC_DLL="$new_path"
-    { $as_echo "$as_me:${as_lineno-$LINENO}: Rewriting MSVC_DLL to \"$new_path\"" >&5
-$as_echo "$as_me: Rewriting MSVC_DLL to \"$new_path\"" >&6;}
-  fi
-
-  # Save the first 10 bytes of this path to the storage, so fixpath can work.
-  all_fixpath_prefixes=("${all_fixpath_prefixes[@]}" "${new_path:0:10}")
-
-  else
-    # We're on a posix platform. Hooray! :)
-    path="$MSVC_DLL"
-    has_space=`$ECHO "$path" | $GREP " "`
-    if test "x$has_space" != x; then
-      { $as_echo "$as_me:${as_lineno-$LINENO}: The path of MSVC_DLL, which resolves as \"$path\", is invalid." >&5
-$as_echo "$as_me: The path of MSVC_DLL, which resolves as \"$path\", is invalid." >&6;}
-      as_fn_error $? "Spaces are not allowed in this path." "$LINENO" 5
-    fi
-
-    # Use eval to expand a potential ~
-    eval path="$path"
-    if test ! -f "$path" && test ! -d "$path"; then
-      as_fn_error $? "The path of MSVC_DLL, which resolves as \"$path\", is not found." "$LINENO" 5
-    fi
-
-    MSVC_DLL="`cd "$path"; $THEPWDCMD -L`"
-  fi
-
       { $as_echo "$as_me:${as_lineno-$LINENO}: checking for $DLL_NAME" >&5
 $as_echo_n "checking for $DLL_NAME... " >&6; }
       { $as_echo "$as_me:${as_lineno-$LINENO}: result: $MSVC_DLL" >&5
@@ -50913,128 +50549,6 @@ $as_echo_n "checking found $DLL_NAME architecture... " >&6; }
       { $as_echo "$as_me:${as_lineno-$LINENO}: result: ok" >&5
 $as_echo "ok" >&6; }
       MSVC_DLL="$POSSIBLE_MSVC_DLL"
-
-  if test "x$OPENJDK_BUILD_OS_ENV" = "xwindows.cygwin"; then
-
-  # Input might be given as Windows format, start by converting to
-  # unix format.
-  path="$MSVC_DLL"
-  new_path=`$CYGPATH -u "$path"`
-
-  # Cygwin tries to hide some aspects of the Windows file system, such that binaries are
-  # named .exe but called without that suffix. Therefore, "foo" and "foo.exe" are considered
-  # the same file, most of the time (as in "test -f"). But not when running cygpath -s, then
-  # "foo.exe" is OK but "foo" is an error.
-  #
-  # This test is therefore slightly more accurate than "test -f" to check for file precense.
-  # It is also a way to make sure we got the proper file name for the real test later on.
-  test_shortpath=`$CYGPATH -s -m "$new_path" 2> /dev/null`
-  if test "x$test_shortpath" = x; then
-    { $as_echo "$as_me:${as_lineno-$LINENO}: The path of MSVC_DLL, which resolves as \"$path\", is invalid." >&5
-$as_echo "$as_me: The path of MSVC_DLL, which resolves as \"$path\", is invalid." >&6;}
-    as_fn_error $? "Cannot locate the the path of MSVC_DLL" "$LINENO" 5
-  fi
-
-  # Call helper function which possibly converts this using DOS-style short mode.
-  # If so, the updated path is stored in $new_path.
-
-  input_path="$new_path"
-  # Check if we need to convert this using DOS-style short mode. If the path
-  # contains just simple characters, use it. Otherwise (spaces, weird characters),
-  # take no chances and rewrite it.
-  # Note: m4 eats our [], so we need to use [ and ] instead.
-  has_forbidden_chars=`$ECHO "$input_path" | $GREP [^-._/a-zA-Z0-9]`
-  if test "x$has_forbidden_chars" != x; then
-    # Now convert it to mixed DOS-style, short mode (no spaces, and / instead of \)
-    shortmode_path=`$CYGPATH -s -m -a "$input_path"`
-    path_after_shortmode=`$CYGPATH -u "$shortmode_path"`
-    if test "x$path_after_shortmode" != "x$input_to_shortpath"; then
-      # Going to short mode and back again did indeed matter. Since short mode is
-      # case insensitive, let's make it lowercase to improve readability.
-      shortmode_path=`$ECHO "$shortmode_path" | $TR 'ABCDEFGHIJKLMNOPQRSTUVWXYZ' 'abcdefghijklmnopqrstuvwxyz'`
-      # Now convert it back to Unix-style (cygpath)
-      input_path=`$CYGPATH -u "$shortmode_path"`
-      new_path="$input_path"
-    fi
-  fi
-
-  test_cygdrive_prefix=`$ECHO $input_path | $GREP ^/cygdrive/`
-  if test "x$test_cygdrive_prefix" = x; then
-    # As a simple fix, exclude /usr/bin since it's not a real path.
-    if test "x`$ECHO $new_path | $GREP ^/usr/bin/`" = x; then
-      # The path is in a Cygwin special directory (e.g. /home). We need this converted to
-      # a path prefixed by /cygdrive for fixpath to work.
-      new_path="$CYGWIN_ROOT_PATH$input_path"
-    fi
-  fi
-
-
-  if test "x$path" != "x$new_path"; then
-    MSVC_DLL="$new_path"
-    { $as_echo "$as_me:${as_lineno-$LINENO}: Rewriting MSVC_DLL to \"$new_path\"" >&5
-$as_echo "$as_me: Rewriting MSVC_DLL to \"$new_path\"" >&6;}
-  fi
-
-  elif test "x$OPENJDK_BUILD_OS_ENV" = "xwindows.msys"; then
-
-  path="$MSVC_DLL"
-  has_colon=`$ECHO $path | $GREP ^.:`
-  new_path="$path"
-  if test "x$has_colon" = x; then
-    # Not in mixed or Windows style, start by that.
-    new_path=`cmd //c echo $path`
-  fi
-
-
-  input_path="$new_path"
-  # Check if we need to convert this using DOS-style short mode. If the path
-  # contains just simple characters, use it. Otherwise (spaces, weird characters),
-  # take no chances and rewrite it.
-  # Note: m4 eats our [], so we need to use [ and ] instead.
-  has_forbidden_chars=`$ECHO "$input_path" | $GREP [^-_/:a-zA-Z0-9]`
-  if test "x$has_forbidden_chars" != x; then
-    # Now convert it to mixed DOS-style, short mode (no spaces, and / instead of \)
-    new_path=`cmd /c "for %A in (\"$input_path\") do @echo %~sA"|$TR \\\\\\\\ / | $TR 'ABCDEFGHIJKLMNOPQRSTUVWXYZ' 'abcdefghijklmnopqrstuvwxyz'`
-  fi
-
-
-  windows_path="$new_path"
-  if test "x$OPENJDK_BUILD_OS_ENV" = "xwindows.cygwin"; then
-    unix_path=`$CYGPATH -u "$windows_path"`
-    new_path="$unix_path"
-  elif test "x$OPENJDK_BUILD_OS_ENV" = "xwindows.msys"; then
-    unix_path=`$ECHO "$windows_path" | $SED -e 's,^\\(.\\):,/\\1,g' -e 's,\\\\,/,g'`
-    new_path="$unix_path"
-  fi
-
-  if test "x$path" != "x$new_path"; then
-    MSVC_DLL="$new_path"
-    { $as_echo "$as_me:${as_lineno-$LINENO}: Rewriting MSVC_DLL to \"$new_path\"" >&5
-$as_echo "$as_me: Rewriting MSVC_DLL to \"$new_path\"" >&6;}
-  fi
-
-  # Save the first 10 bytes of this path to the storage, so fixpath can work.
-  all_fixpath_prefixes=("${all_fixpath_prefixes[@]}" "${new_path:0:10}")
-
-  else
-    # We're on a posix platform. Hooray! :)
-    path="$MSVC_DLL"
-    has_space=`$ECHO "$path" | $GREP " "`
-    if test "x$has_space" != x; then
-      { $as_echo "$as_me:${as_lineno-$LINENO}: The path of MSVC_DLL, which resolves as \"$path\", is invalid." >&5
-$as_echo "$as_me: The path of MSVC_DLL, which resolves as \"$path\", is invalid." >&6;}
-      as_fn_error $? "Spaces are not allowed in this path." "$LINENO" 5
-    fi
-
-    # Use eval to expand a potential ~
-    eval path="$path"
-    if test ! -f "$path" && test ! -d "$path"; then
-      as_fn_error $? "The path of MSVC_DLL, which resolves as \"$path\", is not found." "$LINENO" 5
-    fi
-
-    MSVC_DLL="`cd "$path"; $THEPWDCMD -L`"
-  fi
-
       { $as_echo "$as_me:${as_lineno-$LINENO}: checking for $DLL_NAME" >&5
 $as_echo_n "checking for $DLL_NAME... " >&6; }
       { $as_echo "$as_me:${as_lineno-$LINENO}: result: $MSVC_DLL" >&5
@@ -51083,128 +50597,6 @@ $as_echo_n "checking found $DLL_NAME architecture... " >&6; }
       { $as_echo "$as_me:${as_lineno-$LINENO}: result: ok" >&5
 $as_echo "ok" >&6; }
       MSVC_DLL="$POSSIBLE_MSVC_DLL"
-
-  if test "x$OPENJDK_BUILD_OS_ENV" = "xwindows.cygwin"; then
-
-  # Input might be given as Windows format, start by converting to
-  # unix format.
-  path="$MSVC_DLL"
-  new_path=`$CYGPATH -u "$path"`
-
-  # Cygwin tries to hide some aspects of the Windows file system, such that binaries are
-  # named .exe but called without that suffix. Therefore, "foo" and "foo.exe" are considered
-  # the same file, most of the time (as in "test -f"). But not when running cygpath -s, then
-  # "foo.exe" is OK but "foo" is an error.
-  #
-  # This test is therefore slightly more accurate than "test -f" to check for file precense.
-  # It is also a way to make sure we got the proper file name for the real test later on.
-  test_shortpath=`$CYGPATH -s -m "$new_path" 2> /dev/null`
-  if test "x$test_shortpath" = x; then
-    { $as_echo "$as_me:${as_lineno-$LINENO}: The path of MSVC_DLL, which resolves as \"$path\", is invalid." >&5
-$as_echo "$as_me: The path of MSVC_DLL, which resolves as \"$path\", is invalid." >&6;}
-    as_fn_error $? "Cannot locate the the path of MSVC_DLL" "$LINENO" 5
-  fi
-
-  # Call helper function which possibly converts this using DOS-style short mode.
-  # If so, the updated path is stored in $new_path.
-
-  input_path="$new_path"
-  # Check if we need to convert this using DOS-style short mode. If the path
-  # contains just simple characters, use it. Otherwise (spaces, weird characters),
-  # take no chances and rewrite it.
-  # Note: m4 eats our [], so we need to use [ and ] instead.
-  has_forbidden_chars=`$ECHO "$input_path" | $GREP [^-._/a-zA-Z0-9]`
-  if test "x$has_forbidden_chars" != x; then
-    # Now convert it to mixed DOS-style, short mode (no spaces, and / instead of \)
-    shortmode_path=`$CYGPATH -s -m -a "$input_path"`
-    path_after_shortmode=`$CYGPATH -u "$shortmode_path"`
-    if test "x$path_after_shortmode" != "x$input_to_shortpath"; then
-      # Going to short mode and back again did indeed matter. Since short mode is
-      # case insensitive, let's make it lowercase to improve readability.
-      shortmode_path=`$ECHO "$shortmode_path" | $TR 'ABCDEFGHIJKLMNOPQRSTUVWXYZ' 'abcdefghijklmnopqrstuvwxyz'`
-      # Now convert it back to Unix-style (cygpath)
-      input_path=`$CYGPATH -u "$shortmode_path"`
-      new_path="$input_path"
-    fi
-  fi
-
-  test_cygdrive_prefix=`$ECHO $input_path | $GREP ^/cygdrive/`
-  if test "x$test_cygdrive_prefix" = x; then
-    # As a simple fix, exclude /usr/bin since it's not a real path.
-    if test "x`$ECHO $new_path | $GREP ^/usr/bin/`" = x; then
-      # The path is in a Cygwin special directory (e.g. /home). We need this converted to
-      # a path prefixed by /cygdrive for fixpath to work.
-      new_path="$CYGWIN_ROOT_PATH$input_path"
-    fi
-  fi
-
-
-  if test "x$path" != "x$new_path"; then
-    MSVC_DLL="$new_path"
-    { $as_echo "$as_me:${as_lineno-$LINENO}: Rewriting MSVC_DLL to \"$new_path\"" >&5
-$as_echo "$as_me: Rewriting MSVC_DLL to \"$new_path\"" >&6;}
-  fi
-
-  elif test "x$OPENJDK_BUILD_OS_ENV" = "xwindows.msys"; then
-
-  path="$MSVC_DLL"
-  has_colon=`$ECHO $path | $GREP ^.:`
-  new_path="$path"
-  if test "x$has_colon" = x; then
-    # Not in mixed or Windows style, start by that.
-    new_path=`cmd //c echo $path`
-  fi
-
-
-  input_path="$new_path"
-  # Check if we need to convert this using DOS-style short mode. If the path
-  # contains just simple characters, use it. Otherwise (spaces, weird characters),
-  # take no chances and rewrite it.
-  # Note: m4 eats our [], so we need to use [ and ] instead.
-  has_forbidden_chars=`$ECHO "$input_path" | $GREP [^-_/:a-zA-Z0-9]`
-  if test "x$has_forbidden_chars" != x; then
-    # Now convert it to mixed DOS-style, short mode (no spaces, and / instead of \)
-    new_path=`cmd /c "for %A in (\"$input_path\") do @echo %~sA"|$TR \\\\\\\\ / | $TR 'ABCDEFGHIJKLMNOPQRSTUVWXYZ' 'abcdefghijklmnopqrstuvwxyz'`
-  fi
-
-
-  windows_path="$new_path"
-  if test "x$OPENJDK_BUILD_OS_ENV" = "xwindows.cygwin"; then
-    unix_path=`$CYGPATH -u "$windows_path"`
-    new_path="$unix_path"
-  elif test "x$OPENJDK_BUILD_OS_ENV" = "xwindows.msys"; then
-    unix_path=`$ECHO "$windows_path" | $SED -e 's,^\\(.\\):,/\\1,g' -e 's,\\\\,/,g'`
-    new_path="$unix_path"
-  fi
-
-  if test "x$path" != "x$new_path"; then
-    MSVC_DLL="$new_path"
-    { $as_echo "$as_me:${as_lineno-$LINENO}: Rewriting MSVC_DLL to \"$new_path\"" >&5
-$as_echo "$as_me: Rewriting MSVC_DLL to \"$new_path\"" >&6;}
-  fi
-
-  # Save the first 10 bytes of this path to the storage, so fixpath can work.
-  all_fixpath_prefixes=("${all_fixpath_prefixes[@]}" "${new_path:0:10}")
-
-  else
-    # We're on a posix platform. Hooray! :)
-    path="$MSVC_DLL"
-    has_space=`$ECHO "$path" | $GREP " "`
-    if test "x$has_space" != x; then
-      { $as_echo "$as_me:${as_lineno-$LINENO}: The path of MSVC_DLL, which resolves as \"$path\", is invalid." >&5
-$as_echo "$as_me: The path of MSVC_DLL, which resolves as \"$path\", is invalid." >&6;}
-      as_fn_error $? "Spaces are not allowed in this path." "$LINENO" 5
-    fi
-
-    # Use eval to expand a potential ~
-    eval path="$path"
-    if test ! -f "$path" && test ! -d "$path"; then
-      as_fn_error $? "The path of MSVC_DLL, which resolves as \"$path\", is not found." "$LINENO" 5
-    fi
-
-    MSVC_DLL="`cd "$path"; $THEPWDCMD -L`"
-  fi
-
       { $as_echo "$as_me:${as_lineno-$LINENO}: checking for $DLL_NAME" >&5
 $as_echo_n "checking for $DLL_NAME... " >&6; }
       { $as_echo "$as_me:${as_lineno-$LINENO}: result: $MSVC_DLL" >&5
@@ -51400,128 +50792,6 @@ $as_echo_n "checking found $DLL_NAME architecture... " >&6; }
       { $as_echo "$as_me:${as_lineno-$LINENO}: result: ok" >&5
 $as_echo "ok" >&6; }
       MSVC_DLL="$POSSIBLE_MSVC_DLL"
-
-  if test "x$OPENJDK_BUILD_OS_ENV" = "xwindows.cygwin"; then
-
-  # Input might be given as Windows format, start by converting to
-  # unix format.
-  path="$MSVC_DLL"
-  new_path=`$CYGPATH -u "$path"`
-
-  # Cygwin tries to hide some aspects of the Windows file system, such that binaries are
-  # named .exe but called without that suffix. Therefore, "foo" and "foo.exe" are considered
-  # the same file, most of the time (as in "test -f"). But not when running cygpath -s, then
-  # "foo.exe" is OK but "foo" is an error.
-  #
-  # This test is therefore slightly more accurate than "test -f" to check for file precense.
-  # It is also a way to make sure we got the proper file name for the real test later on.
-  test_shortpath=`$CYGPATH -s -m "$new_path" 2> /dev/null`
-  if test "x$test_shortpath" = x; then
-    { $as_echo "$as_me:${as_lineno-$LINENO}: The path of MSVC_DLL, which resolves as \"$path\", is invalid." >&5
-$as_echo "$as_me: The path of MSVC_DLL, which resolves as \"$path\", is invalid." >&6;}
-    as_fn_error $? "Cannot locate the the path of MSVC_DLL" "$LINENO" 5
-  fi
-
-  # Call helper function which possibly converts this using DOS-style short mode.
-  # If so, the updated path is stored in $new_path.
-
-  input_path="$new_path"
-  # Check if we need to convert this using DOS-style short mode. If the path
-  # contains just simple characters, use it. Otherwise (spaces, weird characters),
-  # take no chances and rewrite it.
-  # Note: m4 eats our [], so we need to use [ and ] instead.
-  has_forbidden_chars=`$ECHO "$input_path" | $GREP [^-._/a-zA-Z0-9]`
-  if test "x$has_forbidden_chars" != x; then
-    # Now convert it to mixed DOS-style, short mode (no spaces, and / instead of \)
-    shortmode_path=`$CYGPATH -s -m -a "$input_path"`
-    path_after_shortmode=`$CYGPATH -u "$shortmode_path"`
-    if test "x$path_after_shortmode" != "x$input_to_shortpath"; then
-      # Going to short mode and back again did indeed matter. Since short mode is
-      # case insensitive, let's make it lowercase to improve readability.
-      shortmode_path=`$ECHO "$shortmode_path" | $TR 'ABCDEFGHIJKLMNOPQRSTUVWXYZ' 'abcdefghijklmnopqrstuvwxyz'`
-      # Now convert it back to Unix-style (cygpath)
-      input_path=`$CYGPATH -u "$shortmode_path"`
-      new_path="$input_path"
-    fi
-  fi
-
-  test_cygdrive_prefix=`$ECHO $input_path | $GREP ^/cygdrive/`
-  if test "x$test_cygdrive_prefix" = x; then
-    # As a simple fix, exclude /usr/bin since it's not a real path.
-    if test "x`$ECHO $new_path | $GREP ^/usr/bin/`" = x; then
-      # The path is in a Cygwin special directory (e.g. /home). We need this converted to
-      # a path prefixed by /cygdrive for fixpath to work.
-      new_path="$CYGWIN_ROOT_PATH$input_path"
-    fi
-  fi
-
-
-  if test "x$path" != "x$new_path"; then
-    MSVC_DLL="$new_path"
-    { $as_echo "$as_me:${as_lineno-$LINENO}: Rewriting MSVC_DLL to \"$new_path\"" >&5
-$as_echo "$as_me: Rewriting MSVC_DLL to \"$new_path\"" >&6;}
-  fi
-
-  elif test "x$OPENJDK_BUILD_OS_ENV" = "xwindows.msys"; then
-
-  path="$MSVC_DLL"
-  has_colon=`$ECHO $path | $GREP ^.:`
-  new_path="$path"
-  if test "x$has_colon" = x; then
-    # Not in mixed or Windows style, start by that.
-    new_path=`cmd //c echo $path`
-  fi
-
-
-  input_path="$new_path"
-  # Check if we need to convert this using DOS-style short mode. If the path
-  # contains just simple characters, use it. Otherwise (spaces, weird characters),
-  # take no chances and rewrite it.
-  # Note: m4 eats our [], so we need to use [ and ] instead.
-  has_forbidden_chars=`$ECHO "$input_path" | $GREP [^-_/:a-zA-Z0-9]`
-  if test "x$has_forbidden_chars" != x; then
-    # Now convert it to mixed DOS-style, short mode (no spaces, and / instead of \)
-    new_path=`cmd /c "for %A in (\"$input_path\") do @echo %~sA"|$TR \\\\\\\\ / | $TR 'ABCDEFGHIJKLMNOPQRSTUVWXYZ' 'abcdefghijklmnopqrstuvwxyz'`
-  fi
-
-
-  windows_path="$new_path"
-  if test "x$OPENJDK_BUILD_OS_ENV" = "xwindows.cygwin"; then
-    unix_path=`$CYGPATH -u "$windows_path"`
-    new_path="$unix_path"
-  elif test "x$OPENJDK_BUILD_OS_ENV" = "xwindows.msys"; then
-    unix_path=`$ECHO "$windows_path" | $SED -e 's,^\\(.\\):,/\\1,g' -e 's,\\\\,/,g'`
-    new_path="$unix_path"
-  fi
-
-  if test "x$path" != "x$new_path"; then
-    MSVC_DLL="$new_path"
-    { $as_echo "$as_me:${as_lineno-$LINENO}: Rewriting MSVC_DLL to \"$new_path\"" >&5
-$as_echo "$as_me: Rewriting MSVC_DLL to \"$new_path\"" >&6;}
-  fi
-
-  # Save the first 10 bytes of this path to the storage, so fixpath can work.
-  all_fixpath_prefixes=("${all_fixpath_prefixes[@]}" "${new_path:0:10}")
-
-  else
-    # We're on a posix platform. Hooray! :)
-    path="$MSVC_DLL"
-    has_space=`$ECHO "$path" | $GREP " "`
-    if test "x$has_space" != x; then
-      { $as_echo "$as_me:${as_lineno-$LINENO}: The path of MSVC_DLL, which resolves as \"$path\", is invalid." >&5
-$as_echo "$as_me: The path of MSVC_DLL, which resolves as \"$path\", is invalid." >&6;}
-      as_fn_error $? "Spaces are not allowed in this path." "$LINENO" 5
-    fi
-
-    # Use eval to expand a potential ~
-    eval path="$path"
-    if test ! -f "$path" && test ! -d "$path"; then
-      as_fn_error $? "The path of MSVC_DLL, which resolves as \"$path\", is not found." "$LINENO" 5
-    fi
-
-    MSVC_DLL="`cd "$path"; $THEPWDCMD -L`"
-  fi
-
       { $as_echo "$as_me:${as_lineno-$LINENO}: checking for $DLL_NAME" >&5
 $as_echo_n "checking for $DLL_NAME... " >&6; }
       { $as_echo "$as_me:${as_lineno-$LINENO}: result: $MSVC_DLL" >&5
@@ -51572,128 +50842,6 @@ $as_echo_n "checking found $DLL_NAME architecture... " >&6; }
       { $as_echo "$as_me:${as_lineno-$LINENO}: result: ok" >&5
 $as_echo "ok" >&6; }
       MSVC_DLL="$POSSIBLE_MSVC_DLL"
-
-  if test "x$OPENJDK_BUILD_OS_ENV" = "xwindows.cygwin"; then
-
-  # Input might be given as Windows format, start by converting to
-  # unix format.
-  path="$MSVC_DLL"
-  new_path=`$CYGPATH -u "$path"`
-
-  # Cygwin tries to hide some aspects of the Windows file system, such that binaries are
-  # named .exe but called without that suffix. Therefore, "foo" and "foo.exe" are considered
-  # the same file, most of the time (as in "test -f"). But not when running cygpath -s, then
-  # "foo.exe" is OK but "foo" is an error.
-  #
-  # This test is therefore slightly more accurate than "test -f" to check for file precense.
-  # It is also a way to make sure we got the proper file name for the real test later on.
-  test_shortpath=`$CYGPATH -s -m "$new_path" 2> /dev/null`
-  if test "x$test_shortpath" = x; then
-    { $as_echo "$as_me:${as_lineno-$LINENO}: The path of MSVC_DLL, which resolves as \"$path\", is invalid." >&5
-$as_echo "$as_me: The path of MSVC_DLL, which resolves as \"$path\", is invalid." >&6;}
-    as_fn_error $? "Cannot locate the the path of MSVC_DLL" "$LINENO" 5
-  fi
-
-  # Call helper function which possibly converts this using DOS-style short mode.
-  # If so, the updated path is stored in $new_path.
-
-  input_path="$new_path"
-  # Check if we need to convert this using DOS-style short mode. If the path
-  # contains just simple characters, use it. Otherwise (spaces, weird characters),
-  # take no chances and rewrite it.
-  # Note: m4 eats our [], so we need to use [ and ] instead.
-  has_forbidden_chars=`$ECHO "$input_path" | $GREP [^-._/a-zA-Z0-9]`
-  if test "x$has_forbidden_chars" != x; then
-    # Now convert it to mixed DOS-style, short mode (no spaces, and / instead of \)
-    shortmode_path=`$CYGPATH -s -m -a "$input_path"`
-    path_after_shortmode=`$CYGPATH -u "$shortmode_path"`
-    if test "x$path_after_shortmode" != "x$input_to_shortpath"; then
-      # Going to short mode and back again did indeed matter. Since short mode is
-      # case insensitive, let's make it lowercase to improve readability.
-      shortmode_path=`$ECHO "$shortmode_path" | $TR 'ABCDEFGHIJKLMNOPQRSTUVWXYZ' 'abcdefghijklmnopqrstuvwxyz'`
-      # Now convert it back to Unix-style (cygpath)
-      input_path=`$CYGPATH -u "$shortmode_path"`
-      new_path="$input_path"
-    fi
-  fi
-
-  test_cygdrive_prefix=`$ECHO $input_path | $GREP ^/cygdrive/`
-  if test "x$test_cygdrive_prefix" = x; then
-    # As a simple fix, exclude /usr/bin since it's not a real path.
-    if test "x`$ECHO $new_path | $GREP ^/usr/bin/`" = x; then
-      # The path is in a Cygwin special directory (e.g. /home). We need this converted to
-      # a path prefixed by /cygdrive for fixpath to work.
-      new_path="$CYGWIN_ROOT_PATH$input_path"
-    fi
-  fi
-
-
-  if test "x$path" != "x$new_path"; then
-    MSVC_DLL="$new_path"
-    { $as_echo "$as_me:${as_lineno-$LINENO}: Rewriting MSVC_DLL to \"$new_path\"" >&5
-$as_echo "$as_me: Rewriting MSVC_DLL to \"$new_path\"" >&6;}
-  fi
-
-  elif test "x$OPENJDK_BUILD_OS_ENV" = "xwindows.msys"; then
-
-  path="$MSVC_DLL"
-  has_colon=`$ECHO $path | $GREP ^.:`
-  new_path="$path"
-  if test "x$has_colon" = x; then
-    # Not in mixed or Windows style, start by that.
-    new_path=`cmd //c echo $path`
-  fi
-
-
-  input_path="$new_path"
-  # Check if we need to convert this using DOS-style short mode. If the path
-  # contains just simple characters, use it. Otherwise (spaces, weird characters),
-  # take no chances and rewrite it.
-  # Note: m4 eats our [], so we need to use [ and ] instead.
-  has_forbidden_chars=`$ECHO "$input_path" | $GREP [^-_/:a-zA-Z0-9]`
-  if test "x$has_forbidden_chars" != x; then
-    # Now convert it to mixed DOS-style, short mode (no spaces, and / instead of \)
-    new_path=`cmd /c "for %A in (\"$input_path\") do @echo %~sA"|$TR \\\\\\\\ / | $TR 'ABCDEFGHIJKLMNOPQRSTUVWXYZ' 'abcdefghijklmnopqrstuvwxyz'`
-  fi
-
-
-  windows_path="$new_path"
-  if test "x$OPENJDK_BUILD_OS_ENV" = "xwindows.cygwin"; then
-    unix_path=`$CYGPATH -u "$windows_path"`
-    new_path="$unix_path"
-  elif test "x$OPENJDK_BUILD_OS_ENV" = "xwindows.msys"; then
-    unix_path=`$ECHO "$windows_path" | $SED -e 's,^\\(.\\):,/\\1,g' -e 's,\\\\,/,g'`
-    new_path="$unix_path"
-  fi
-
-  if test "x$path" != "x$new_path"; then
-    MSVC_DLL="$new_path"
-    { $as_echo "$as_me:${as_lineno-$LINENO}: Rewriting MSVC_DLL to \"$new_path\"" >&5
-$as_echo "$as_me: Rewriting MSVC_DLL to \"$new_path\"" >&6;}
-  fi
-
-  # Save the first 10 bytes of this path to the storage, so fixpath can work.
-  all_fixpath_prefixes=("${all_fixpath_prefixes[@]}" "${new_path:0:10}")
-
-  else
-    # We're on a posix platform. Hooray! :)
-    path="$MSVC_DLL"
-    has_space=`$ECHO "$path" | $GREP " "`
-    if test "x$has_space" != x; then
-      { $as_echo "$as_me:${as_lineno-$LINENO}: The path of MSVC_DLL, which resolves as \"$path\", is invalid." >&5
-$as_echo "$as_me: The path of MSVC_DLL, which resolves as \"$path\", is invalid." >&6;}
-      as_fn_error $? "Spaces are not allowed in this path." "$LINENO" 5
-    fi
-
-    # Use eval to expand a potential ~
-    eval path="$path"
-    if test ! -f "$path" && test ! -d "$path"; then
-      as_fn_error $? "The path of MSVC_DLL, which resolves as \"$path\", is not found." "$LINENO" 5
-    fi
-
-    MSVC_DLL="`cd "$path"; $THEPWDCMD -L`"
-  fi
-
       { $as_echo "$as_me:${as_lineno-$LINENO}: checking for $DLL_NAME" >&5
 $as_echo_n "checking for $DLL_NAME... " >&6; }
       { $as_echo "$as_me:${as_lineno-$LINENO}: result: $MSVC_DLL" >&5
@@ -51753,128 +50901,6 @@ $as_echo_n "checking found $DLL_NAME architecture... " >&6; }
       { $as_echo "$as_me:${as_lineno-$LINENO}: result: ok" >&5
 $as_echo "ok" >&6; }
       MSVC_DLL="$POSSIBLE_MSVC_DLL"
-
-  if test "x$OPENJDK_BUILD_OS_ENV" = "xwindows.cygwin"; then
-
-  # Input might be given as Windows format, start by converting to
-  # unix format.
-  path="$MSVC_DLL"
-  new_path=`$CYGPATH -u "$path"`
-
-  # Cygwin tries to hide some aspects of the Windows file system, such that binaries are
-  # named .exe but called without that suffix. Therefore, "foo" and "foo.exe" are considered
-  # the same file, most of the time (as in "test -f"). But not when running cygpath -s, then
-  # "foo.exe" is OK but "foo" is an error.
-  #
-  # This test is therefore slightly more accurate than "test -f" to check for file precense.
-  # It is also a way to make sure we got the proper file name for the real test later on.
-  test_shortpath=`$CYGPATH -s -m "$new_path" 2> /dev/null`
-  if test "x$test_shortpath" = x; then
-    { $as_echo "$as_me:${as_lineno-$LINENO}: The path of MSVC_DLL, which resolves as \"$path\", is invalid." >&5
-$as_echo "$as_me: The path of MSVC_DLL, which resolves as \"$path\", is invalid." >&6;}
-    as_fn_error $? "Cannot locate the the path of MSVC_DLL" "$LINENO" 5
-  fi
-
-  # Call helper function which possibly converts this using DOS-style short mode.
-  # If so, the updated path is stored in $new_path.
-
-  input_path="$new_path"
-  # Check if we need to convert this using DOS-style short mode. If the path
-  # contains just simple characters, use it. Otherwise (spaces, weird characters),
-  # take no chances and rewrite it.
-  # Note: m4 eats our [], so we need to use [ and ] instead.
-  has_forbidden_chars=`$ECHO "$input_path" | $GREP [^-._/a-zA-Z0-9]`
-  if test "x$has_forbidden_chars" != x; then
-    # Now convert it to mixed DOS-style, short mode (no spaces, and / instead of \)
-    shortmode_path=`$CYGPATH -s -m -a "$input_path"`
-    path_after_shortmode=`$CYGPATH -u "$shortmode_path"`
-    if test "x$path_after_shortmode" != "x$input_to_shortpath"; then
-      # Going to short mode and back again did indeed matter. Since short mode is
-      # case insensitive, let's make it lowercase to improve readability.
-      shortmode_path=`$ECHO "$shortmode_path" | $TR 'ABCDEFGHIJKLMNOPQRSTUVWXYZ' 'abcdefghijklmnopqrstuvwxyz'`
-      # Now convert it back to Unix-style (cygpath)
-      input_path=`$CYGPATH -u "$shortmode_path"`
-      new_path="$input_path"
-    fi
-  fi
-
-  test_cygdrive_prefix=`$ECHO $input_path | $GREP ^/cygdrive/`
-  if test "x$test_cygdrive_prefix" = x; then
-    # As a simple fix, exclude /usr/bin since it's not a real path.
-    if test "x`$ECHO $new_path | $GREP ^/usr/bin/`" = x; then
-      # The path is in a Cygwin special directory (e.g. /home). We need this converted to
-      # a path prefixed by /cygdrive for fixpath to work.
-      new_path="$CYGWIN_ROOT_PATH$input_path"
-    fi
-  fi
-
-
-  if test "x$path" != "x$new_path"; then
-    MSVC_DLL="$new_path"
-    { $as_echo "$as_me:${as_lineno-$LINENO}: Rewriting MSVC_DLL to \"$new_path\"" >&5
-$as_echo "$as_me: Rewriting MSVC_DLL to \"$new_path\"" >&6;}
-  fi
-
-  elif test "x$OPENJDK_BUILD_OS_ENV" = "xwindows.msys"; then
-
-  path="$MSVC_DLL"
-  has_colon=`$ECHO $path | $GREP ^.:`
-  new_path="$path"
-  if test "x$has_colon" = x; then
-    # Not in mixed or Windows style, start by that.
-    new_path=`cmd //c echo $path`
-  fi
-
-
-  input_path="$new_path"
-  # Check if we need to convert this using DOS-style short mode. If the path
-  # contains just simple characters, use it. Otherwise (spaces, weird characters),
-  # take no chances and rewrite it.
-  # Note: m4 eats our [], so we need to use [ and ] instead.
-  has_forbidden_chars=`$ECHO "$input_path" | $GREP [^-_/:a-zA-Z0-9]`
-  if test "x$has_forbidden_chars" != x; then
-    # Now convert it to mixed DOS-style, short mode (no spaces, and / instead of \)
-    new_path=`cmd /c "for %A in (\"$input_path\") do @echo %~sA"|$TR \\\\\\\\ / | $TR 'ABCDEFGHIJKLMNOPQRSTUVWXYZ' 'abcdefghijklmnopqrstuvwxyz'`
-  fi
-
-
-  windows_path="$new_path"
-  if test "x$OPENJDK_BUILD_OS_ENV" = "xwindows.cygwin"; then
-    unix_path=`$CYGPATH -u "$windows_path"`
-    new_path="$unix_path"
-  elif test "x$OPENJDK_BUILD_OS_ENV" = "xwindows.msys"; then
-    unix_path=`$ECHO "$windows_path" | $SED -e 's,^\\(.\\):,/\\1,g' -e 's,\\\\,/,g'`
-    new_path="$unix_path"
-  fi
-
-  if test "x$path" != "x$new_path"; then
-    MSVC_DLL="$new_path"
-    { $as_echo "$as_me:${as_lineno-$LINENO}: Rewriting MSVC_DLL to \"$new_path\"" >&5
-$as_echo "$as_me: Rewriting MSVC_DLL to \"$new_path\"" >&6;}
-  fi
-
-  # Save the first 10 bytes of this path to the storage, so fixpath can work.
-  all_fixpath_prefixes=("${all_fixpath_prefixes[@]}" "${new_path:0:10}")
-
-  else
-    # We're on a posix platform. Hooray! :)
-    path="$MSVC_DLL"
-    has_space=`$ECHO "$path" | $GREP " "`
-    if test "x$has_space" != x; then
-      { $as_echo "$as_me:${as_lineno-$LINENO}: The path of MSVC_DLL, which resolves as \"$path\", is invalid." >&5
-$as_echo "$as_me: The path of MSVC_DLL, which resolves as \"$path\", is invalid." >&6;}
-      as_fn_error $? "Spaces are not allowed in this path." "$LINENO" 5
-    fi
-
-    # Use eval to expand a potential ~
-    eval path="$path"
-    if test ! -f "$path" && test ! -d "$path"; then
-      as_fn_error $? "The path of MSVC_DLL, which resolves as \"$path\", is not found." "$LINENO" 5
-    fi
-
-    MSVC_DLL="`cd "$path"; $THEPWDCMD -L`"
-  fi
-
       { $as_echo "$as_me:${as_lineno-$LINENO}: checking for $DLL_NAME" >&5
 $as_echo_n "checking for $DLL_NAME... " >&6; }
       { $as_echo "$as_me:${as_lineno-$LINENO}: result: $MSVC_DLL" >&5
@@ -51941,128 +50967,6 @@ $as_echo_n "checking found $DLL_NAME architecture... " >&6; }
       { $as_echo "$as_me:${as_lineno-$LINENO}: result: ok" >&5
 $as_echo "ok" >&6; }
       MSVC_DLL="$POSSIBLE_MSVC_DLL"
-
-  if test "x$OPENJDK_BUILD_OS_ENV" = "xwindows.cygwin"; then
-
-  # Input might be given as Windows format, start by converting to
-  # unix format.
-  path="$MSVC_DLL"
-  new_path=`$CYGPATH -u "$path"`
-
-  # Cygwin tries to hide some aspects of the Windows file system, such that binaries are
-  # named .exe but called without that suffix. Therefore, "foo" and "foo.exe" are considered
-  # the same file, most of the time (as in "test -f"). But not when running cygpath -s, then
-  # "foo.exe" is OK but "foo" is an error.
-  #
-  # This test is therefore slightly more accurate than "test -f" to check for file precense.
-  # It is also a way to make sure we got the proper file name for the real test later on.
-  test_shortpath=`$CYGPATH -s -m "$new_path" 2> /dev/null`
-  if test "x$test_shortpath" = x; then
-    { $as_echo "$as_me:${as_lineno-$LINENO}: The path of MSVC_DLL, which resolves as \"$path\", is invalid." >&5
-$as_echo "$as_me: The path of MSVC_DLL, which resolves as \"$path\", is invalid." >&6;}
-    as_fn_error $? "Cannot locate the the path of MSVC_DLL" "$LINENO" 5
-  fi
-
-  # Call helper function which possibly converts this using DOS-style short mode.
-  # If so, the updated path is stored in $new_path.
-
-  input_path="$new_path"
-  # Check if we need to convert this using DOS-style short mode. If the path
-  # contains just simple characters, use it. Otherwise (spaces, weird characters),
-  # take no chances and rewrite it.
-  # Note: m4 eats our [], so we need to use [ and ] instead.
-  has_forbidden_chars=`$ECHO "$input_path" | $GREP [^-._/a-zA-Z0-9]`
-  if test "x$has_forbidden_chars" != x; then
-    # Now convert it to mixed DOS-style, short mode (no spaces, and / instead of \)
-    shortmode_path=`$CYGPATH -s -m -a "$input_path"`
-    path_after_shortmode=`$CYGPATH -u "$shortmode_path"`
-    if test "x$path_after_shortmode" != "x$input_to_shortpath"; then
-      # Going to short mode and back again did indeed matter. Since short mode is
-      # case insensitive, let's make it lowercase to improve readability.
-      shortmode_path=`$ECHO "$shortmode_path" | $TR 'ABCDEFGHIJKLMNOPQRSTUVWXYZ' 'abcdefghijklmnopqrstuvwxyz'`
-      # Now convert it back to Unix-style (cygpath)
-      input_path=`$CYGPATH -u "$shortmode_path"`
-      new_path="$input_path"
-    fi
-  fi
-
-  test_cygdrive_prefix=`$ECHO $input_path | $GREP ^/cygdrive/`
-  if test "x$test_cygdrive_prefix" = x; then
-    # As a simple fix, exclude /usr/bin since it's not a real path.
-    if test "x`$ECHO $new_path | $GREP ^/usr/bin/`" = x; then
-      # The path is in a Cygwin special directory (e.g. /home). We need this converted to
-      # a path prefixed by /cygdrive for fixpath to work.
-      new_path="$CYGWIN_ROOT_PATH$input_path"
-    fi
-  fi
-
-
-  if test "x$path" != "x$new_path"; then
-    MSVC_DLL="$new_path"
-    { $as_echo "$as_me:${as_lineno-$LINENO}: Rewriting MSVC_DLL to \"$new_path\"" >&5
-$as_echo "$as_me: Rewriting MSVC_DLL to \"$new_path\"" >&6;}
-  fi
-
-  elif test "x$OPENJDK_BUILD_OS_ENV" = "xwindows.msys"; then
-
-  path="$MSVC_DLL"
-  has_colon=`$ECHO $path | $GREP ^.:`
-  new_path="$path"
-  if test "x$has_colon" = x; then
-    # Not in mixed or Windows style, start by that.
-    new_path=`cmd //c echo $path`
-  fi
-
-
-  input_path="$new_path"
-  # Check if we need to convert this using DOS-style short mode. If the path
-  # contains just simple characters, use it. Otherwise (spaces, weird characters),
-  # take no chances and rewrite it.
-  # Note: m4 eats our [], so we need to use [ and ] instead.
-  has_forbidden_chars=`$ECHO "$input_path" | $GREP [^-_/:a-zA-Z0-9]`
-  if test "x$has_forbidden_chars" != x; then
-    # Now convert it to mixed DOS-style, short mode (no spaces, and / instead of \)
-    new_path=`cmd /c "for %A in (\"$input_path\") do @echo %~sA"|$TR \\\\\\\\ / | $TR 'ABCDEFGHIJKLMNOPQRSTUVWXYZ' 'abcdefghijklmnopqrstuvwxyz'`
-  fi
-
-
-  windows_path="$new_path"
-  if test "x$OPENJDK_BUILD_OS_ENV" = "xwindows.cygwin"; then
-    unix_path=`$CYGPATH -u "$windows_path"`
-    new_path="$unix_path"
-  elif test "x$OPENJDK_BUILD_OS_ENV" = "xwindows.msys"; then
-    unix_path=`$ECHO "$windows_path" | $SED -e 's,^\\(.\\):,/\\1,g' -e 's,\\\\,/,g'`
-    new_path="$unix_path"
-  fi
-
-  if test "x$path" != "x$new_path"; then
-    MSVC_DLL="$new_path"
-    { $as_echo "$as_me:${as_lineno-$LINENO}: Rewriting MSVC_DLL to \"$new_path\"" >&5
-$as_echo "$as_me: Rewriting MSVC_DLL to \"$new_path\"" >&6;}
-  fi
-
-  # Save the first 10 bytes of this path to the storage, so fixpath can work.
-  all_fixpath_prefixes=("${all_fixpath_prefixes[@]}" "${new_path:0:10}")
-
-  else
-    # We're on a posix platform. Hooray! :)
-    path="$MSVC_DLL"
-    has_space=`$ECHO "$path" | $GREP " "`
-    if test "x$has_space" != x; then
-      { $as_echo "$as_me:${as_lineno-$LINENO}: The path of MSVC_DLL, which resolves as \"$path\", is invalid." >&5
-$as_echo "$as_me: The path of MSVC_DLL, which resolves as \"$path\", is invalid." >&6;}
-      as_fn_error $? "Spaces are not allowed in this path." "$LINENO" 5
-    fi
-
-    # Use eval to expand a potential ~
-    eval path="$path"
-    if test ! -f "$path" && test ! -d "$path"; then
-      as_fn_error $? "The path of MSVC_DLL, which resolves as \"$path\", is not found." "$LINENO" 5
-    fi
-
-    MSVC_DLL="`cd "$path"; $THEPWDCMD -L`"
-  fi
-
       { $as_echo "$as_me:${as_lineno-$LINENO}: checking for $DLL_NAME" >&5
 $as_echo_n "checking for $DLL_NAME... " >&6; }
       { $as_echo "$as_me:${as_lineno-$LINENO}: result: $MSVC_DLL" >&5
@@ -52126,128 +51030,6 @@ $as_echo_n "checking found $DLL_NAME architecture... " >&6; }
       { $as_echo "$as_me:${as_lineno-$LINENO}: result: ok" >&5
 $as_echo "ok" >&6; }
       MSVC_DLL="$POSSIBLE_MSVC_DLL"
-
-  if test "x$OPENJDK_BUILD_OS_ENV" = "xwindows.cygwin"; then
-
-  # Input might be given as Windows format, start by converting to
-  # unix format.
-  path="$MSVC_DLL"
-  new_path=`$CYGPATH -u "$path"`
-
-  # Cygwin tries to hide some aspects of the Windows file system, such that binaries are
-  # named .exe but called without that suffix. Therefore, "foo" and "foo.exe" are considered
-  # the same file, most of the time (as in "test -f"). But not when running cygpath -s, then
-  # "foo.exe" is OK but "foo" is an error.
-  #
-  # This test is therefore slightly more accurate than "test -f" to check for file precense.
-  # It is also a way to make sure we got the proper file name for the real test later on.
-  test_shortpath=`$CYGPATH -s -m "$new_path" 2> /dev/null`
-  if test "x$test_shortpath" = x; then
-    { $as_echo "$as_me:${as_lineno-$LINENO}: The path of MSVC_DLL, which resolves as \"$path\", is invalid." >&5
-$as_echo "$as_me: The path of MSVC_DLL, which resolves as \"$path\", is invalid." >&6;}
-    as_fn_error $? "Cannot locate the the path of MSVC_DLL" "$LINENO" 5
-  fi
-
-  # Call helper function which possibly converts this using DOS-style short mode.
-  # If so, the updated path is stored in $new_path.
-
-  input_path="$new_path"
-  # Check if we need to convert this using DOS-style short mode. If the path
-  # contains just simple characters, use it. Otherwise (spaces, weird characters),
-  # take no chances and rewrite it.
-  # Note: m4 eats our [], so we need to use [ and ] instead.
-  has_forbidden_chars=`$ECHO "$input_path" | $GREP [^-._/a-zA-Z0-9]`
-  if test "x$has_forbidden_chars" != x; then
-    # Now convert it to mixed DOS-style, short mode (no spaces, and / instead of \)
-    shortmode_path=`$CYGPATH -s -m -a "$input_path"`
-    path_after_shortmode=`$CYGPATH -u "$shortmode_path"`
-    if test "x$path_after_shortmode" != "x$input_to_shortpath"; then
-      # Going to short mode and back again did indeed matter. Since short mode is
-      # case insensitive, let's make it lowercase to improve readability.
-      shortmode_path=`$ECHO "$shortmode_path" | $TR 'ABCDEFGHIJKLMNOPQRSTUVWXYZ' 'abcdefghijklmnopqrstuvwxyz'`
-      # Now convert it back to Unix-style (cygpath)
-      input_path=`$CYGPATH -u "$shortmode_path"`
-      new_path="$input_path"
-    fi
-  fi
-
-  test_cygdrive_prefix=`$ECHO $input_path | $GREP ^/cygdrive/`
-  if test "x$test_cygdrive_prefix" = x; then
-    # As a simple fix, exclude /usr/bin since it's not a real path.
-    if test "x`$ECHO $new_path | $GREP ^/usr/bin/`" = x; then
-      # The path is in a Cygwin special directory (e.g. /home). We need this converted to
-      # a path prefixed by /cygdrive for fixpath to work.
-      new_path="$CYGWIN_ROOT_PATH$input_path"
-    fi
-  fi
-
-
-  if test "x$path" != "x$new_path"; then
-    MSVC_DLL="$new_path"
-    { $as_echo "$as_me:${as_lineno-$LINENO}: Rewriting MSVC_DLL to \"$new_path\"" >&5
-$as_echo "$as_me: Rewriting MSVC_DLL to \"$new_path\"" >&6;}
-  fi
-
-  elif test "x$OPENJDK_BUILD_OS_ENV" = "xwindows.msys"; then
-
-  path="$MSVC_DLL"
-  has_colon=`$ECHO $path | $GREP ^.:`
-  new_path="$path"
-  if test "x$has_colon" = x; then
-    # Not in mixed or Windows style, start by that.
-    new_path=`cmd //c echo $path`
-  fi
-
-
-  input_path="$new_path"
-  # Check if we need to convert this using DOS-style short mode. If the path
-  # contains just simple characters, use it. Otherwise (spaces, weird characters),
-  # take no chances and rewrite it.
-  # Note: m4 eats our [], so we need to use [ and ] instead.
-  has_forbidden_chars=`$ECHO "$input_path" | $GREP [^-_/:a-zA-Z0-9]`
-  if test "x$has_forbidden_chars" != x; then
-    # Now convert it to mixed DOS-style, short mode (no spaces, and / instead of \)
-    new_path=`cmd /c "for %A in (\"$input_path\") do @echo %~sA"|$TR \\\\\\\\ / | $TR 'ABCDEFGHIJKLMNOPQRSTUVWXYZ' 'abcdefghijklmnopqrstuvwxyz'`
-  fi
-
-
-  windows_path="$new_path"
-  if test "x$OPENJDK_BUILD_OS_ENV" = "xwindows.cygwin"; then
-    unix_path=`$CYGPATH -u "$windows_path"`
-    new_path="$unix_path"
-  elif test "x$OPENJDK_BUILD_OS_ENV" = "xwindows.msys"; then
-    unix_path=`$ECHO "$windows_path" | $SED -e 's,^\\(.\\):,/\\1,g' -e 's,\\\\,/,g'`
-    new_path="$unix_path"
-  fi
-
-  if test "x$path" != "x$new_path"; then
-    MSVC_DLL="$new_path"
-    { $as_echo "$as_me:${as_lineno-$LINENO}: Rewriting MSVC_DLL to \"$new_path\"" >&5
-$as_echo "$as_me: Rewriting MSVC_DLL to \"$new_path\"" >&6;}
-  fi
-
-  # Save the first 10 bytes of this path to the storage, so fixpath can work.
-  all_fixpath_prefixes=("${all_fixpath_prefixes[@]}" "${new_path:0:10}")
-
-  else
-    # We're on a posix platform. Hooray! :)
-    path="$MSVC_DLL"
-    has_space=`$ECHO "$path" | $GREP " "`
-    if test "x$has_space" != x; then
-      { $as_echo "$as_me:${as_lineno-$LINENO}: The path of MSVC_DLL, which resolves as \"$path\", is invalid." >&5
-$as_echo "$as_me: The path of MSVC_DLL, which resolves as \"$path\", is invalid." >&6;}
-      as_fn_error $? "Spaces are not allowed in this path." "$LINENO" 5
-    fi
-
-    # Use eval to expand a potential ~
-    eval path="$path"
-    if test ! -f "$path" && test ! -d "$path"; then
-      as_fn_error $? "The path of MSVC_DLL, which resolves as \"$path\", is not found." "$LINENO" 5
-    fi
-
-    MSVC_DLL="`cd "$path"; $THEPWDCMD -L`"
-  fi
-
       { $as_echo "$as_me:${as_lineno-$LINENO}: checking for $DLL_NAME" >&5
 $as_echo_n "checking for $DLL_NAME... " >&6; }
       { $as_echo "$as_me:${as_lineno-$LINENO}: result: $MSVC_DLL" >&5
@@ -54718,31 +53500,14 @@ $as_echo "$as_me: WARNING: unrecognized options: $ac_unrecognized_opts" >&2;}
 fi
 
 
-# After AC_OUTPUT, we need to do final work
 
+# Try to move the config.log file to the output directory.
+if test -e ./config.log; then
+  $MV -f ./config.log "$OUTPUT_ROOT/config.log" 2> /dev/null
+fi
 
-  # Try to move the config.log file to the output directory.
-  if test -e ./config.log; then
-    $MV -f ./config.log "$OUTPUT_ROOT/config.log" 2> /dev/null
-  fi
-
-  # Rotate our log file (configure.log)
-  if test -e "$OUTPUT_ROOT/configure.log.old"; then
-    $RM -f "$OUTPUT_ROOT/configure.log.old"
-  fi
-  if test -e "$OUTPUT_ROOT/configure.log"; then
-    $MV -f "$OUTPUT_ROOT/configure.log" "$OUTPUT_ROOT/configure.log.old" 2> /dev/null
-  fi
-
-  # Move configure.log from current directory to the build output root
-  if test -e ./configure.log; then
-    echo found it
-    $MV -f ./configure.log "$OUTPUT_ROOT/configure.log" 2> /dev/null
-  fi
-
-  # Make the compare script executable
-  $CHMOD +x $OUTPUT_ROOT/compare.sh
-
+# Make the compare script executable
+$CHMOD +x $OUTPUT_ROOT/compare.sh
 
 # Finally output some useful information to the user
 
@@ -54817,21 +53582,5 @@ fi
     printf "WARNING: The toolchain version used is known to have issues. Please\n"
     printf "consider using a supported version unless you know what you are doing.\n"
     printf "\n"
-  fi
-
-
-  # Locate config.log.
-  if test -e "./config.log"; then
-    CONFIG_LOG_PATH="."
-  fi
-
-  if test -e "$CONFIG_LOG_PATH/config.log"; then
-    $GREP '^configure:.*: WARNING:' "$CONFIG_LOG_PATH/config.log" > /dev/null 2>&1
-    if test $? -eq 0; then
-      printf "The following warnings were produced. Repeated here for convenience:\n"
-      # We must quote sed expression (using []) to stop m4 from eating the [].
-      $GREP '^configure:.*: WARNING:' "$CONFIG_LOG_PATH/config.log" | $SED -e  's/^configure:[0-9]*: //'
-      printf "\n"
-    fi
   fi
 

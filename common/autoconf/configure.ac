@@ -108,7 +108,7 @@ BASIC_SETUP_DEVKIT
 # and options (variants and debug level) parsed.
 BASIC_SETUP_OUTPUT_DIR
 
-W# Must be done before we can call HELP_MSG_MISSING_DEPENDENCY.
+# Must be done before we can call HELP_MSG_MISSING_DEPENDENCY.
 HELP_SETUP_DEPENDENCY_HELP
 
 # Setup tools that requires more complex handling, or that is not needed by the configure script.
@@ -264,11 +264,15 @@ CONFIG_STATUS="$OUTPUT_ROOT/config.status"
 
 # Create the actual output files. Now the main work of configure is done.
 AC_OUTPUT
-
-# After AC_OUTPUT, we need to do final work
 CUSTOM_CONFIG_OUTPUT_GENERATED_HOOK
-BASIC_POST_CONFIG_OUTPUT
+
+# Try to move the config.log file to the output directory.
+if test -e ./config.log; then
+  $MV -f ./config.log "$OUTPUT_ROOT/config.log" 2> /dev/null
+fi
+
+# Make the compare script executable
+$CHMOD +x $OUTPUT_ROOT/compare.sh
 
 # Finally output some useful information to the user
 HELP_PRINT_SUMMARY_AND_WARNINGS
-HELP_REPEAT_WARNINGS
