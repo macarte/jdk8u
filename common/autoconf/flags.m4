@@ -583,6 +583,7 @@ AC_DEFUN_ONCE([FLAGS_SETUP_COMPILER_FLAGS_FOR_JDK],
           -D_STATIC_CPPLIB -D_DISABLE_DEPRECATE_STATIC_CPPLIB"
     fi
   fi
+  FDLIBM_CFLAGS="$FDLIBM_CFLAGS $with_extra_cflags"
   AC_SUBST(FDLIBM_CFLAGS)
 
   ###############################################################################

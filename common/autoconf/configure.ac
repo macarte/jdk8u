@@ -108,7 +108,7 @@ BASIC_SETUP_DEVKIT
 # and options (variants and debug level) parsed.
 BASIC_SETUP_OUTPUT_DIR
 
-# Must be done before we can call HELP_MSG_MISSING_DEPENDENCY.
+W# Must be done before we can call HELP_MSG_MISSING_DEPENDENCY.
 HELP_SETUP_DEPENDENCY_HELP
 
 # Setup tools that requires more complex handling, or that is not needed by the configure script.
@@ -195,6 +195,8 @@ FLAGS_SETUP_COMPILER_FLAGS_MISC
 
 # Setup debug symbols (need objcopy from the toolchain for that)
 JDKOPT_SETUP_DEBUG_SYMBOLS
+
+HOTSPOT_SETUP_SA
 
 ###############################################################################
 #
