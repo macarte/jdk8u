@@ -36,7 +36,12 @@
 #include <sys/uio.h>
 #include <unistd.h>
 #include <errno.h>
+
+#ifdef MUSL_LIBC
+#include <poll.h>
+#else
 #include <sys/poll.h>
+#endif
 
 /*
  * Stack allocated by thread when doing blocking operation
@@ -58,7 +63,13 @@ typedef struct {
 /*
  * Signal to unblock thread
  */
+#ifdef MUSL_LIBC
+#define __SIGRTMAX SIGRTMAX
+/* initialize later as SIGRTMAX is not a constant */
+static int sigWakeup;
+#else
 static int sigWakeup = (__SIGRTMAX - 2);
+#endif
 
 /*
  * fdTable holds one entry per file descriptor, up to a certain
@@ -147,6 +158,7 @@ static void __attribute((constructor)) init() {
     /*
      * Setup the signal handler
      */
+    sigWakeup = (__SIGRTMAX - 2);
     sa.sa_handler = sig_wakeup;
     sa.sa_flags   = 0;
     sigemptyset(&sa.sa_mask);

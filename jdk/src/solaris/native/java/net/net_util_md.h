@@ -33,7 +33,11 @@
 #include <unistd.h>
 
 #ifndef USE_SELECT
+#ifdef MUSL_LIBC
+#include <poll.h>
+#else
 #include <sys/poll.h>
+#endif
 #endif
 
 
