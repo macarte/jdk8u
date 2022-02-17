@@ -95,7 +95,9 @@
 # include <string.h>
 # include <syscall.h>
 # include <sys/sysinfo.h>
+#ifndef MUSL_LIBC
 # include <gnu/libc-version.h>
+#endif
 # include <sys/ipc.h>
 # include <sys/shm.h>
 # include <link.h>
@@ -125,6 +127,18 @@ PRAGMA_FORMAT_MUTE_WARNINGS_FOR_GCC
 
 // for timer info max values which include all bits
 #define ALL_64_BITS CONST64(0xFFFFFFFFFFFFFFFF)
+
+#ifdef MUSL_LIBC
+// dlvsym is not a part of POSIX
+// and musl libc doesn't implement it.
+static void *dlvsym(void *handle,
+                    const char *symbol,
+                    const char *version) {
+   // load the latest version of symbol
+   return dlsym(handle, symbol);
+}
+#endif
+
 
 #define LARGEPAGES_BIT (1 << 6)
 ////////////////////////////////////////////////////////////////////////////////
@@ -581,6 +595,13 @@ void os::Linux::hotspot_sigmask(Thread* thread) {
 // detecting pthread library
 
 void os::Linux::libpthread_init() {
+#ifdef MUSL_LIBC
+  os::Linux::set_glibc_version("glibc 2.9");
+  os::Linux::set_libpthread_version("NPTL");
+  os::Linux::set_is_NPTL();
+  os::Linux::set_is_floating_stack();
+#else
+
   // Save glibc and pthread version strings. Note that _CS_GNU_LIBC_VERSION
   // and _CS_GNU_LIBPTHREAD_VERSION are supported in glibc >= 2.3.2. Use a
   // generic name for earlier versions.
@@ -639,6 +660,7 @@ void os::Linux::libpthread_init() {
   if (os::Linux::is_NPTL() || os::Linux::supports_variable_stack_size()) {
      os::Linux::set_is_floating_stack();
   }
+#endif
 }
 
 /////////////////////////////////////////////////////////////////////////////

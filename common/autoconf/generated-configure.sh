@@ -881,6 +881,8 @@ OUTPUT_ROOT
 CONF_NAME
 SPEC
 DEVKIT_LIB_DIR
+HOTSPOT_BUILD_LIBC
+HOTSPOT_TARGET_LIBC
 BUILD_VARIANT_RELEASE
 DEBUG_CLASSFILES
 FASTDEBUG
@@ -13635,6 +13637,18 @@ test -n "$target_alias" &&
       ;;
   esac
 
+  case "$build_os" in
+    *linux*-musl)
+      VAR_LIBC=musl
+      ;;
+    *linux*-gnu)
+      VAR_LIBC=gnu
+      ;;
+    *)
+      VAR_LIBC=default
+      ;;
+  esac
+
 
   # First argument is the cpu name from the trip/quad
   case "$build_cpu" in
@@ -13717,7 +13731,7 @@ test -n "$target_alias" &&
   OPENJDK_BUILD_CPU_ARCH="$VAR_CPU_ARCH"
   OPENJDK_BUILD_CPU_BITS="$VAR_CPU_BITS"
   OPENJDK_BUILD_CPU_ENDIAN="$VAR_CPU_ENDIAN"
-
+  OPENJDK_BUILD_LIBC="$VAR_LIBC"
 
 
 
@@ -13773,6 +13787,17 @@ $as_echo "$OPENJDK_BUILD_OS-$OPENJDK_BUILD_CPU" >&6; }
       ;;
   esac
 
+  case "$host_os" in
+    *linux*-musl)
+      VAR_LIBC=musl
+      ;;
+    *linux*-gnu)
+      VAR_LIBC=gnu
+      ;;
+    *)
+      VAR_LIBC=default
+      ;;
+  esac
 
   # First argument is the cpu name from the trip/quad
   case "$host_cpu" in
@@ -13855,7 +13880,7 @@ $as_echo "$OPENJDK_BUILD_OS-$OPENJDK_BUILD_CPU" >&6; }
   OPENJDK_TARGET_CPU_ARCH="$VAR_CPU_ARCH"
   OPENJDK_TARGET_CPU_BITS="$VAR_CPU_BITS"
   OPENJDK_TARGET_CPU_ENDIAN="$VAR_CPU_ENDIAN"
-
+  OPENJDK_TARGET_LIBC="$VAR_LIBC"
 
 
 
@@ -14765,6 +14790,17 @@ $as_echo "$DEBUG_LEVEL" >&6; }
   # when hotspot makefiles are rewritten.
   if test "x$MACOSX_UNIVERSAL" = xtrue; then
     HOTSPOT_TARGET=universal_${HOTSPOT_EXPORT}
+  fi
+
+  if test "x$OPENJDK_TARGET_LIBC" = "xmusl"; then
+    HOTSPOT_TARGET_LIBC=$OPENJDK_TARGET_LIBC
+  else
+    HOTSPOT_TARGET_LIBC=""
+  fi
+  if test "x$OPENJDK_BUILD_LIBC" = "xmusl"; then
+    HOTSPOT_BUILD_LIBC=$OPENJDK_BUILD_LIBC
+  else
+    HOTSPOT_BUILD_LIBC=""
   fi
 
   #####
@@ -42661,6 +42697,10 @@ $as_echo "$supports" >&6; }
     CCXXFLAGS_JDK="$CCXXFLAGS_JDK -D_ALLBSD_SOURCE"
   fi
 
+  if test "x$OPENJDK_TARGET_LIBC" = xmusl; then
+    CCXXFLAGS_JDK="$CCXXFLAGS_JDK -DMUSL_LIBC"
+  fi
+
   # Additional macosx handling
   if test "x$OPENJDK_TARGET_OS" = xmacosx; then
     if test "x$TOOLCHAIN_TYPE" = xgcc; then
@@ -48187,7 +48227,8 @@ ac_compiler_gnu=$ac_cv_cxx_compiler_gnu
           #include<ft2build.h>
           #include FT_FREETYPE_H
           int main () {
-            FT_Init_FreeType(NULL);
+            FT_Library library;
+            FT_Init_FreeType(&library);
             return 0;
           }
 
